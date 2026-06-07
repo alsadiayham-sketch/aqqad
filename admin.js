@@ -129,7 +129,7 @@ function switchTab(tab) {
     var panels = document.querySelectorAll('.tab-panel');
     for (var i = 0; i < buttons.length; i += 1) buttons[i].classList.toggle('active', buttons[i].getAttribute('data-tab') === tab);
     for (var j = 0; j < panels.length; j += 1) panels[j].classList.toggle('active', panels[j].id === 'tab-' + tab);
-    var titles = { dashboard: 'لوحة المؤشرات', products: 'إدارة المنتجات', orders: 'إدارة الطلبات', discounts: 'إدارة الخصومات', settings: 'إعدادات المتجر', hero: 'شرائح الواجهة الرئيسية', users: 'إدارة المستخدمين' };
+    var titles = { dashboard: 'لوحة المؤشرات', products: 'إدارة المنتجات', orders: 'إدارة الطلبات', discounts: 'إدارة الخصومات', settings: 'إعدادات المتجر', hero: 'شرائح الواجهة الرئيسية', users: 'إدارة الموظفين' };
     document.getElementById('tabTitle').textContent = titles[tab] || 'لوحة الإدارة';
 }
 
@@ -523,7 +523,7 @@ function saveUser(event) {
     };
     db.collection('settings').doc('users').set(adminState.users).then(function () {
         document.getElementById('userForm').reset();
-        setAdminStatus('تم حفظ المستخدم.', 'success');
+        setAdminStatus('تم حفظ الموظف.', 'success');
     });
 }
 
@@ -538,7 +538,7 @@ function editUser(username) {
 
 function removeUser(username) {
     if (adminState.currentRole !== 'admin' || username === 'aqqad') return;
-    if (!confirm('حذف المستخدم؟')) return;
+    if (!confirm('حذف الموظف؟')) return;
     delete adminState.users[username];
     db.collection('settings').doc('users').set(adminState.users);
 }

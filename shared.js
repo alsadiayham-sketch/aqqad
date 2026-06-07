@@ -266,7 +266,6 @@
         saveCartStorage();
         renderCart();
         showToast('أضفنا القطعة إلى السلة.');
-        openCart();
     }
 
     function updateCartQty(productId, sizeIdx, delta) {
