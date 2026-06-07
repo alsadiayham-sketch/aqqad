@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>إتمام الطلب | عقاد كيدز</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+    <style>
+        .checkout-page { min-height: 100vh; padding: 100px 0 60px; }
+        .checkout-grid { display: grid; grid-template-columns: 1.1fr 0.9fr; gap: 22px; }
+        .checkout-card { background: rgba(255,255,255,0.94); border-radius: 24px; box-shadow: var(--shadow); padding: 22px; border: 1px solid rgba(201,169,110,0.12); }
+        .checkout-card h2, .checkout-card h3 { margin-top: 0; }
+        .checkout-item { display: grid; grid-template-columns: 68px 1fr auto; gap: 12px; padding: 12px; background: var(--bg-alt); border-radius: 18px; margin-bottom: 12px; }
+        .checkout-item img { width: 68px; height: 68px; object-fit: cover; border-radius: 14px; }
+        .checkout-summary-row { display: flex; justify-content: space-between; gap: 12px; padding: 10px 0; border-bottom: 1px solid rgba(201,169,110,0.12); }
+        .checkout-summary-row.total { font-weight: 900; font-size: 1.15rem; border-bottom: none; }
+        .option-list { display: grid; gap: 10px; margin-top: 14px; }
+        .option-card { border: 2px solid rgba(201,169,110,0.18); border-radius: 16px; padding: 14px; cursor: pointer; background: rgba(255,255,255,0.8); }
+        .option-card.active { border-color: var(--primary); background: rgba(232,213,176,0.25); }
+        .option-card strong { display: block; }
+        .option-card span { color: var(--text-light); font-size: 0.9rem; }
+        .checkout-actions { display: grid; gap: 10px; margin-top: 18px; }
+        .empty-checkout { text-align: center; padding: 50px 24px; }
+        .inline-note { color: var(--text-light); font-size: 0.92rem; margin-top: 8px; }
+        @media (max-width: 900px) { .checkout-grid { grid-template-columns: 1fr; } }
+    </style>
+</head>
+<body>
+    <header class="site-header">
+        <div class="container navbar">
+            <a href="index.html" class="brand">
+                <span class="brand-mark">ع</span>
+                <div>
+                    <strong>عقاد كيدز</strong>
+                    <span>إتمام الطلب</span>
+                </div>
+            </a>
+            <div class="region-switcher-wrap">
+                <label for="checkoutRegionSelector">المنطقة</label>
+                <select id="checkoutRegionSelector">
+                    <option value="palestine">فلسطين</option>
+                    <option value="jordan">الأردن</option>
+                </select>
+            </div>
+        </div>
+    </header>
+
+    <div class="checkout-page">
+        <div class="container">
+            <div id="checkoutContent"></div>
+        </div>
+    </div>
+
+    <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore-compat.js"></script>
+    <script src="firebase-config.js"></script>
+    <script src="data.js"></script>
+    <script>
+        var checkoutProducts = normalizeProducts(DEFAULT_PRODUCTS);
+        var checkoutDiscounts = normalizeDiscounts(DEFAULT_DISCOUNTS);
+        var checkoutSettings = normalizeSettings(DEFAULT_SITE_SETTINGS);
+        var checkoutCart = normalizeCartItems(JSON.parse(localStorage.getItem(CART_STORAGE_KEY) || '[]'), checkoutProducts);
+        var checkoutRegion = getCurrentRegion();
+        var selectedDeliveryId = '';
+        var selectedPaymentMethod = 'cod';
+
+        document.addEventListener('DOMContentLoaded', function () {
+            document.getElementById('checkoutRegionSelector').value = checkoutRegion;
+            document.getElementById('checkoutRegionSelector').addEventListener('change', function (event) {
+                checkoutRegion = setCurrentRegion(event.target.value);
+                selectedDeliveryId = '';
+                renderCheckout();
+            });
+            loadCheckoutData();
+        });
+
+        function loadCheckoutData() {
+            renderCheckout();
+            if (!window.db) return;
+            Promise.all([
+                db.collection('products').get(),
+                db.collection('discounts').get(),
+                db.collection('settings').doc('config').get()
+            ]).then(function (responses) {
+                checkoutProducts = responses[0].docs.map(function (docSnap) { var data = docSnap.data(); data.id = docSnap.id; return normalizeProduct(data); });
+                checkoutDiscounts = responses[1].docs.map(function (docSnap) { var data = docSnap.data(); data.id = docSnap.id; return normalizeDiscount(data); });
+                checkoutSettings = normalizeSettings(responses[2].exists ? responses[2].data() : DEFAULT_SITE_SETTINGS);
+                checkoutCart = normalizeCartItems(JSON.parse(localStorage.getItem(CART_STORAGE_KEY) || '[]'), checkoutProducts);
+                renderCheckout();
+            }).catch(function () {
+                renderCheckout();
+            });
+        }
+
+        function getCheckoutSubtotalBase() {
+            var total = 0;
+            checkoutCart.forEach(function (item) {
+                var product = getProductById(checkoutProducts, item.id);
+                if (!product) return;
+                total += getFinalPrice(product, item.sizeIdx, checkoutDiscounts, 'palestine', checkoutSettings).finalBase * item.qty;
+            });
+            return total;
+        }
+
+        function getSelectedDelivery() {
+            var deliveryList = getRegionDeliveryList(checkoutSettings, checkoutRegion);
+            if (!deliveryList.length) return null;
+            var selected = null;
+            for (var i = 0; i < deliveryList.length; i += 1) {
+                if (deliveryList[i].id === selectedDeliveryId) selected = deliveryList[i];
+            }
+            return selected || deliveryList[0];
+        }
+
+        function renderCheckout() {
+            var container = document.getElementById('checkoutContent');
+            var deliveryList = getRegionDeliveryList(checkoutSettings, checkoutRegion);
+            var formData = getCheckoutFormData();
+            if (!selectedDeliveryId && deliveryList.length) selectedDeliveryId = deliveryList[0].id;
+            if (!checkoutCart.length) {
+                container.innerHTML = '<div class="checkout-card empty-checkout"><h2>السلة فارغة</h2><p>أضيفي منتجات أولاً ثم عودي لإتمام الطلب.</p><a class="btn btn-primary" href="index.html">العودة للمتجر</a></div>';
+                return;
+            }
+            var itemsHtml = checkoutCart.map(function (item) {
+                var product = getProductById(checkoutProducts, item.id);
+                if (!product) return '';
+                var sizeData = getPriceForSize(product, item.sizeIdx);
+                var priceBase = getFinalPrice(product, item.sizeIdx, checkoutDiscounts, 'palestine', checkoutSettings).finalBase * item.qty;
+                return '<div class="checkout-item"><img src="' + escapeHtml(product.image || FALLBACK_IMAGE) + '" alt="' + escapeHtml(product.name) + '" onerror="this.src=FALLBACK_IMAGE"><div><strong>' + escapeHtml(product.name) + '</strong><div class="inline-note">' + escapeHtml(sizeData.label) + ' • الكمية ' + item.qty + '</div></div><div><strong>' + formatCurrency(priceBase, checkoutRegion, checkoutSettings) + '</strong></div></div>';
+            }).join('');
+            var deliveryHtml = deliveryList.map(function (item) {
+                var priceBase = checkoutRegion === 'jordan' ? item.price * checkoutSettings.conversionRate : item.price;
+                return '<div class="option-card ' + (item.id === selectedDeliveryId ? 'active' : '') + '" onclick="selectDelivery(\'' + item.id + '\')"><strong>' + escapeHtml(item.name) + '</strong><span>' + formatCurrency(priceBase, checkoutRegion, checkoutSettings) + '</span></div>';
+            }).join('');
+            var paymentHtml = safeArray(checkoutSettings.paymentMethods).map(function (method) {
+                var note = method === 'visa' ? 'سيتم التواصل معك لإتمام الدفع' : 'الدفع عند الاستلام هو الخيار الافتراضي';
+                return '<div class="option-card ' + (method === selectedPaymentMethod ? 'active' : '') + '" onclick="selectPaymentMethod(\'' + method + '\')"><strong>' + getPaymentMethodLabel(method) + '</strong><span>' + note + '</span></div>';
+            }).join('');
+            var subtotalBase = getCheckoutSubtotalBase();
+            var selectedDelivery = getSelectedDelivery();
+            var deliveryBase = selectedDelivery ? (checkoutRegion === 'jordan' ? selectedDelivery.price * checkoutSettings.conversionRate : selectedDelivery.price) : 0;
+            var totalBase = subtotalBase + deliveryBase;
+            container.innerHTML = '<div class="checkout-grid">'
+                + '<div class="checkout-card"><h2>بيانات الطلب</h2><div class="option-list">' + itemsHtml + '</div><h3>منطقة التوصيل</h3><div class="option-list">' + deliveryHtml + '</div><h3>طريقة الدفع</h3><div class="option-list">' + paymentHtml + '</div></div>'
+                + '<div class="checkout-card"><h2>معلومات المستلم</h2><div class="option-list"><input id="customerName" type="text" placeholder="الاسم الكامل" value="' + escapeHtml(formData.name) + '"><input id="customerPhone" type="tel" placeholder="رقم الهاتف" value="' + escapeHtml(formData.phone) + '"><input id="customerAddress" type="text" placeholder="العنوان الكامل" value="' + escapeHtml(formData.address) + '"><textarea id="customerNotes" rows="4" placeholder="ملاحظات إضافية (اختياري)">' + escapeHtml(formData.notes) + '</textarea></div><div class="checkout-summary-row"><span>المجموع</span><strong>' + formatCurrency(subtotalBase, checkoutRegion, checkoutSettings) + '</strong></div><div class="checkout-summary-row"><span>التوصيل</span><strong>' + formatCurrency(deliveryBase, checkoutRegion, checkoutSettings) + '</strong></div><div class="checkout-summary-row total"><span>الإجمالي</span><strong>' + formatCurrency(totalBase, checkoutRegion, checkoutSettings) + '</strong></div><div class="checkout-actions"><button class="btn btn-primary full-width" onclick="submitOrder()">تأكيد الطلب</button><a class="btn btn-secondary full-width" href="index.html">متابعة التسوق</a></div></div>'
+                + '</div>';
+        }
+
+        function getCheckoutFormData() {
+            var nameInput = document.getElementById('customerName');
+            var phoneInput = document.getElementById('customerPhone');
+            var addressInput = document.getElementById('customerAddress');
+            var notesInput = document.getElementById('customerNotes');
+            return {
+                name: nameInput ? nameInput.value : '',
+                phone: phoneInput ? phoneInput.value : '',
+                address: addressInput ? addressInput.value : '',
+                notes: notesInput ? notesInput.value : ''
+            };
+        }
+
+        function selectDelivery(deliveryId) {
+            selectedDeliveryId = deliveryId;
+            renderCheckout();
+        }
+
+        function selectPaymentMethod(method) {
+            selectedPaymentMethod = method;
+            renderCheckout();
+        }
+
+        function submitOrder() {
+            var name = String(document.getElementById('customerName').value || '').trim();
+            var phone = String(document.getElementById('customerPhone').value || '').trim();
+            var address = String(document.getElementById('customerAddress').value || '').trim();
+            var notes = String(document.getElementById('customerNotes').value || '').trim();
+            if (!name || !phone || !address) {
+                alert('يرجى تعبئة الاسم والهاتف والعنوان.');
+                return;
+            }
+            var delivery = getSelectedDelivery();
+            if (!delivery) {
+                alert('يرجى اختيار منطقة التوصيل.');
+                return;
+            }
+            var orderNumber = makeOrderId();
+            var subtotalBase = getCheckoutSubtotalBase();
+            var deliveryBase = checkoutRegion === 'jordan' ? delivery.price * checkoutSettings.conversionRate : delivery.price;
+            var totalBase = subtotalBase + deliveryBase;
+            var items = checkoutCart.map(function (item) {
+                var product = getProductById(checkoutProducts, item.id);
+                var sizeData = getPriceForSize(product, item.sizeIdx);
+                var pricing = getFinalPrice(product, item.sizeIdx, checkoutDiscounts, 'palestine', checkoutSettings);
+                return {
+                    productId: product.id,
+                    name: product.name,
+                    brand: product.brand,
+                    category: product.category,
+                    size: sizeData.label,
+                    qty: item.qty,
+                    unitPriceBase: pricing.finalBase,
+                    lineTotalBase: pricing.finalBase * item.qty,
+                    image: product.image
+                };
+            });
+            var orderPayload = {
+                orderNumber: orderNumber,
+                customerName: name,
+                phone: phone,
+                address: address,
+                notes: notes,
+                items: items,
+                itemsCount: items.reduce(function (sum, item) { return sum + item.qty; }, 0),
+                subtotalBase: subtotalBase,
+                deliveryBase: deliveryBase,
+                totalBase: totalBase,
+                totalFormatted: formatCurrency(totalBase, checkoutRegion, checkoutSettings),
+                region: checkoutRegion,
+                regionLabel: getRegionLabel(checkoutRegion),
+                deliveryId: delivery.id,
+                deliveryName: delivery.name,
+                paymentMethod: selectedPaymentMethod,
+                paymentLabel: getPaymentMethodLabel(selectedPaymentMethod),
+                status: 'new',
+                statusLabel: getOrderStatusLabel('new'),
+                conversionRate: checkoutSettings.conversionRate,
+                createdAtIso: new Date().toISOString(),
+                updatedAtIso: new Date().toISOString()
+            };
+            var whatsappMessage = buildOrderWhatsappMessage(orderPayload);
+            var finalize = function () {
+                localStorage.setItem(LAST_ORDER_STORAGE_KEY, JSON.stringify({ order: orderPayload, whatsappUrl: buildWhatsAppUrl(checkoutSettings.whatsappNumber, whatsappMessage) }));
+                localStorage.removeItem(CART_STORAGE_KEY);
+                window.location.href = 'confirmation.html?order=' + encodeURIComponent(orderNumber) + '&whatsapp=1';
+            };
+            if (!window.db) {
+                finalize();
+                return;
+            }
+            var firestorePayload = JSON.parse(JSON.stringify(orderPayload));
+            firestorePayload.createdAt = firebase.firestore.FieldValue.serverTimestamp();
+            firestorePayload.updatedAt = firebase.firestore.FieldValue.serverTimestamp();
+            db.collection('orders').add(firestorePayload).then(finalize).catch(function () {
+                alert('حدث خطأ أثناء حفظ الطلب. حاولي مرة أخرى.');
+            });
+        }
+
+        function buildOrderWhatsappMessage(order) {
+            var lines = ['طلب جديد من عقاد كيدز', 'رقم الطلب: ' + order.orderNumber, 'الاسم: ' + order.customerName, 'الهاتف: ' + order.phone, 'المنطقة: ' + order.regionLabel, 'العنوان: ' + order.address, 'طريقة الدفع: ' + order.paymentLabel, ''];
+            order.items.forEach(function (item) {
+                lines.push('- ' + item.name + ' | ' + item.size + ' | الكمية ' + item.qty);
+            });
+            lines.push('');
+            lines.push('الإجمالي: ' + order.totalFormatted);
+            if (order.paymentMethod === 'visa') lines.push('ملاحظة: تم اختيار الدفع ببطاقة ائتمان وسيتم التواصل لإتمام الدفع.');
+            if (order.notes) lines.push('ملاحظات: ' + order.notes);
+            return lines.join('\n');
+        }
+    </script>
+</body>
+</html>
