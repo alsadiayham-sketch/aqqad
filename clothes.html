@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head><link rel="icon" type="image/png" href="logo.png">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ملابس الأطفال | عقاد كيدز</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="shared.css">
+</head>
+<body>
+    <div class="deco-watermarks"><div class="deco-text one">ملابس مرنة للأيام السعيدة</div><div class="deco-text two">قصّات مريحة وألوان دافئة</div><div class="deco-text three">اختيارات لكل عمر</div></div>
+    <div id="navbarMount"></div>
+    <main class="page-shell">
+        <section class="catalog-banner">
+            <div class="container">
+                <div class="catalog-banner-card mesh-surface glass-card" data-animate>
+                    <div class="pill-label"><span class="dot"></span>قسم الملابس</div>
+                    <h1>طبقات طفولية تتنفس راحة وأناقة</h1>
+                    <p>فلترة حسب العمر، المقاس، والبراند لتصلي بسرعة إلى القطعة الأقرب لشخصية طفلك اليومية أو المناسبة القادمة.</p>
+                </div>
+            </div>
+        </section>
+        <section class="section section-tight">
+            <div class="container stack">
+                <div class="filter-shell glass-card" data-animate>
+                    <div class="filter-grid">
+                        <label>الفئة العمرية<select id="ageFilter"><option value="">كل الأعمار</option></select></label>
+                        <label>المقاس<select id="sizeFilter"><option value="">كل المقاسات</option></select></label>
+                        <label>البراند<select id="brandFilter"><option value="">كل البراندات</option></select></label>
+                        <label>بحث سريع<input id="searchFilter" type="text" placeholder="ابحثي بالاسم أو الوصف"></label>
+                    </div>
+                    <div class="stats-row"><strong id="resultsCount">0 قطعة</strong><span>المعروض محسوب حسب منطقتك الحالية وعملتك المفضلة.</span></div>
+                </div>
+                <div class="products-grid" id="catalogGrid"></div>
+                <div class="empty-state hidden" id="catalogEmpty">لا توجد نتائج تطابق خياراتك الحالية. غيّري الفلاتر وستجدين اقتراحات أخرى جميلة.</div>
+            </div>
+        </section>
+    </main>
+    <div id="footerMount"></div>
+    <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore-compat.js"></script>
+    <script src="firebase-config.js"></script>
+    <script src="data.js"></script>
+    <script src="shared.js"></script>
+    <script>
+        var clothesFilters = { ageGroup: '', size: '', brand: '', search: '' };
+        document.addEventListener('DOMContentLoaded', function () {
+            AqqadStore.init({ activePage: 'clothes', navSubtitle: 'ملابس ناعمة ومبهجة' });
+            AqqadStore.onReady(function () {
+                bindClothes();
+                renderClothesFilters();
+                renderClothesCatalog();
+            });
+        });
+        function bindClothes() {
+            if (document.body.getAttribute('data-clothes-bound') === '1') return;
+            document.body.setAttribute('data-clothes-bound', '1');
+            document.getElementById('ageFilter').addEventListener('change', function (event) { clothesFilters.ageGroup = event.target.value; renderClothesCatalog(); });
+            document.getElementById('sizeFilter').addEventListener('change', function (event) { clothesFilters.size = event.target.value; renderClothesCatalog(); });
+            document.getElementById('brandFilter').addEventListener('change', function (event) { clothesFilters.brand = event.target.value; renderClothesCatalog(); });
+            document.getElementById('searchFilter').addEventListener('input', function (event) { clothesFilters.search = normalizeSearchText(event.target.value); renderClothesCatalog(); });
+        }
+        function renderClothesFilters() {
+            var products = AqqadStore.getProductsByType('clothes');
+            var ageNode = document.getElementById('ageFilter');
+            var sizeNode = document.getElementById('sizeFilter');
+            var brandNode = document.getElementById('brandFilter');
+            ageNode.innerHTML = '<option value="">كل الأعمار</option>' + Object.keys(AGE_GROUP_OPTIONS).map(function (key) { return '<option value="' + key + '">' + AGE_GROUP_OPTIONS[key].label + '</option>'; }).join('');
+            sizeNode.innerHTML = '<option value="">كل المقاسات</option>' + ['0-3 شهور','3-6 شهور','6-9 شهور','9-12 شهور','1-2','2-3','3-4','S','M','L','XL','XXL'].map(function (size) { return '<option value="' + size + '">' + size + '</option>'; }).join('');
+            var brands = {};
+            for (var i = 0; i < products.length; i += 1) brands[products[i].brand] = true;
+            brandNode.innerHTML = '<option value="">كل البراندات</option>' + Object.keys(brands).sort().map(function (brand) { return '<option value="' + escapeHtml(brand) + '">' + escapeHtml(brand) + '</option>'; }).join('');
+            ageNode.value = clothesFilters.ageGroup;
+            sizeNode.value = clothesFilters.size;
+            brandNode.value = clothesFilters.brand;
+        }
+        function renderClothesCatalog() {
+            var products = AqqadStore.getProductsByType('clothes').filter(function (product) {
+                var matchesAge = !clothesFilters.ageGroup || product.ageGroup === clothesFilters.ageGroup;
+                var matchesSize = !clothesFilters.size || product.sizes.some(function (size) { return size.label === clothesFilters.size; });
+                var matchesBrand = !clothesFilters.brand || product.brand === clothesFilters.brand;
+                var text = normalizeSearchText([product.name, product.brand, product.description].join(' '));
+                var matchesSearch = !clothesFilters.search || text.indexOf(clothesFilters.search) >= 0;
+                return matchesAge && matchesSize && matchesBrand && matchesSearch;
+            });
+            document.getElementById('resultsCount').textContent = products.length + ' قطعة';
+            document.getElementById('catalogGrid').innerHTML = products.map(function (product) { return AqqadStore.renderProductCard(product); }).join('');
+            AqqadStore.observeNewElements();
+            document.getElementById('catalogEmpty').classList.toggle('hidden', products.length > 0);
+        }
+    </script>
+</body>
+</html>
+

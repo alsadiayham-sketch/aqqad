@@ -1,87 +1,63 @@
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
-<head>
+<head><link rel="icon" type="image/png" href="logo.png">
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>تم استلام طلبك | عقاد كيدز</title>
+    <title>تأكيد الطلب | عقاد كيدز</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="style.css">
-    <style>
-        .confirmation-page { min-height: 100vh; padding: 110px 0 60px; }
-        .confirmation-card { max-width: 760px; margin: 0 auto; background: rgba(255,255,255,0.96); border-radius: 28px; box-shadow: var(--shadow-hover); padding: 28px; text-align: center; position: relative; overflow: hidden; }
-        .confirmation-badge { display: inline-flex; padding: 10px 16px; border-radius: 999px; background: rgba(201,169,110,0.18); color: var(--primary-dark); font-weight: 800; margin-bottom: 16px; }
-        .confirmation-card h1 { margin-top: 0; }
-        .summary-box { text-align: right; background: var(--bg-alt); border-radius: 22px; padding: 18px; margin: 24px 0; }
-        .summary-box .row { display: flex; justify-content: space-between; gap: 12px; padding: 8px 0; border-bottom: 1px solid rgba(201,169,110,0.14); }
-        .summary-box .row:last-child { border-bottom: none; }
-        .confirmation-actions { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
-        .confetti { position: fixed; top: -20px; width: 12px; height: 18px; opacity: 0.8; animation: fall 4s linear forwards; z-index: 80; }
-        @keyframes fall { to { transform: translateY(110vh) rotate(420deg); opacity: 0; } }
-    </style>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="shared.css">
 </head>
 <body>
-    <div class="confirmation-page">
-        <div class="container">
-            <div class="confirmation-card">
-                <span class="confirmation-badge">تم تأكيد الطلب بنجاح</span>
-                <h1>شكراً لثقتكِ بـ عقاد كيدز</h1>
-                <p>استلمنا طلبك وسنتواصل معكِ قريباً لتأكيد التفاصيل.</p>
-                <div class="summary-box" id="confirmationSummary"></div>
-                <div class="confirmation-actions">
-                    <a class="btn btn-primary" id="whatsappConfirmLink" href="index.html">إرسال الطلب عبر واتساب</a>
-                    <a class="btn btn-secondary" href="index.html">العودة للمتجر</a>
+    <div id="navbarMount"></div>
+    <main class="page-shell">
+        <section class="section">
+            <div class="container">
+                <div class="confirm-card glass-card" id="confirmationCard" data-animate>
+                    <div class="pill-label"><span class="dot"></span>تم تسجيل الطلب بنجاح</div>
+                    <h1 style="font-size:clamp(2.2rem,5vw,4rem);margin:18px 0 8px">شكراً لثقتك بعقاد كيدز</h1>
+                    <p style="max-width:560px;margin:0 auto;color:var(--muted)">حفظنا طلبك، وسنراجع تفاصيله ثم نتواصل معك في أقرب وقت. احتفظي برقم الطلب للمتابعة السريعة.</p>
+                    <div class="stack" id="confirmationSummary" style="margin-top:24px;text-align:right"></div>
+                    <div class="action-row" style="justify-content:center;margin-top:24px">
+                        <a class="btn btn-primary" id="confirmationWhatsappLink" href="#">إرسال الطلب عبر واتساب</a>
+                        <a class="btn btn-secondary" href="index.html">العودة للمتجر</a>
+                    </div>
                 </div>
             </div>
-        </div>
-    </div>
-
+        </section>
+    </main>
+    <div id="footerMount"></div>
     <script src="data.js"></script>
+    <script src="shared.js"></script>
     <script>
-        var lastOrderPayload = JSON.parse(localStorage.getItem(LAST_ORDER_STORAGE_KEY) || '{}');
         document.addEventListener('DOMContentLoaded', function () {
-            renderConfirmation();
-            launchConfetti();
+            AqqadStore.init({ navSubtitle: 'طلبك أصبح لدينا' });
+            AqqadStore.onReady(function () {
+                renderConfirmationPage();
+            });
         });
-
-        function renderConfirmation() {
+        function renderConfirmationPage() {
+            var payload = AqqadStore.getLastOrder();
             var summary = document.getElementById('confirmationSummary');
-            var link = document.getElementById('whatsappConfirmLink');
-            if (!lastOrderPayload.order) {
-                summary.innerHTML = '<div class="row"><span>لا توجد بيانات طلب محفوظة.</span><span></span></div>';
+            var link = document.getElementById('confirmationWhatsappLink');
+            if (!payload.order) {
+                summary.innerHTML = '<div class="notice-card">لا توجد بيانات طلب محفوظة الآن. يمكنك العودة للتسوّق والبدء من جديد.</div>';
                 link.href = 'index.html';
                 link.textContent = 'العودة للمتجر';
                 return;
             }
-            var order = lastOrderPayload.order;
+            var order = payload.order;
             summary.innerHTML = ''
-                + '<div class="row"><span>رقم الطلب</span><strong>' + escapeHtml(order.orderNumber) + '</strong></div>'
-                + '<div class="row"><span>الاسم</span><strong>' + escapeHtml(order.customerName) + '</strong></div>'
-                + '<div class="row"><span>المنطقة</span><strong>' + escapeHtml(order.regionLabel) + '</strong></div>'
-                + '<div class="row"><span>التوصيل</span><strong>' + escapeHtml(order.deliveryName) + '</strong></div>'
-                + '<div class="row"><span>طريقة الدفع</span><strong>' + escapeHtml(order.paymentLabel) + '</strong></div>'
-                + '<div class="row"><span>الإجمالي</span><strong>' + escapeHtml(order.totalFormatted) + '</strong></div>';
-            link.href = lastOrderPayload.whatsappUrl || buildWhatsAppUrl(DEFAULT_SITE_SETTINGS.whatsappNumber);
-            var query = new URLSearchParams(window.location.search);
+                + '<div class="summary-line notice-card"><span>رقم الطلب</span><strong>' + escapeHtml(order.orderNumber) + '</strong></div>'
+                + '<div class="summary-line notice-card"><span>الاسم</span><strong>' + escapeHtml(order.customerName) + '</strong></div>'
+                + '<div class="summary-line notice-card"><span>المنطقة</span><strong>' + escapeHtml(order.regionLabel) + '</strong></div>'
+                + '<div class="summary-line notice-card"><span>طريقة الدفع</span><strong>' + escapeHtml(order.paymentLabel) + '</strong></div>'
+                + '<div class="summary-line notice-card"><span>الإجمالي</span><strong>' + escapeHtml(order.totalFormatted) + '</strong></div>';
+            link.href = payload.whatsappUrl || buildWhatsAppUrl(DEFAULT_SITE_SETTINGS.whatsappNumber);
+            var query = new URLSearchParams(location.search);
             if (query.get('whatsapp') === '1' && link.href.indexOf('wa.me') >= 0) {
                 setTimeout(function () { window.open(link.href, '_blank'); }, 700);
-            }
-        }
-
-        function launchConfetti() {
-            var colors = ['#c9a96e', '#e8d5b0', '#8b6914', '#faf6f0'];
-            for (var i = 0; i < 40; i += 1) {
-                var piece = document.createElement('div');
-                piece.className = 'confetti';
-                piece.style.right = Math.round(Math.random() * 100) + 'vw';
-                piece.style.background = colors[i % colors.length];
-                piece.style.animationDelay = (Math.random() * 1.2) + 's';
-                piece.style.transform = 'rotate(' + Math.round(Math.random() * 180) + 'deg)';
-                document.body.appendChild(piece);
-                (function (node) {
-                    setTimeout(function () { if (node && node.parentNode) node.parentNode.removeChild(node); }, 5000);
-                })(piece);
             }
         }
     </script>

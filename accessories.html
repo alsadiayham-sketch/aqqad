@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head><link rel="icon" type="image/png" href="logo.png">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>الإكسسوارات والعناية | عقاد كيدز</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="shared.css">
+</head>
+<body>
+    <div class="deco-watermarks"><div class="deco-text one">حقائب صغيرة وروائح لطيفة</div><div class="deco-text two">عناية تكمل الهدوء</div><div class="deco-text three">تفاصيل تجعل اليوم أجمل</div></div>
+    <div id="navbarMount"></div>
+    <main class="page-shell">
+        <section class="catalog-banner">
+            <div class="container">
+                <div class="catalog-banner-card mesh-surface glass-card" data-animate>
+                    <div class="pill-label"><span class="dot"></span>الإكسسوارات والعناية</div>
+                    <h1>قسم واحد يجمع الإكسسوارات والكريمات والعطور</h1>
+                    <p>اختاري الفئة الفرعية المناسبة، ثم تنقلي بين أطواق الشعر والحقائب الصغيرة ومنتجات العناية اليومية بروح مرحة.</p>
+                </div>
+            </div>
+        </section>
+        <section class="section section-tight">
+            <div class="container stack">
+                <div class="filter-shell glass-card" data-animate>
+                    <div class="filter-grid">
+                        <label>الفئة الفرعية<select id="subCategoryFilter"><option value="">الكل</option><option value="accessories">إكسسوارات</option><option value="creams">كريمات</option><option value="perfumes">عطور</option></select></label>
+                        <label>البراند<select id="accBrandFilter"><option value="">كل البراندات</option></select></label>
+                        <label>بحث سريع<input id="accSearchFilter" type="text" placeholder="ابحثي بالاسم أو الوصف"></label>
+                    </div>
+                    <div class="stats-row"><strong id="accResultsCount">0 قطعة</strong><span>القسم يوحّد كل القطع الصغيرة التي تمنح الطلب شخصية كاملة.</span></div>
+                </div>
+                <div class="products-grid" id="accCatalogGrid"></div>
+                <div class="empty-state hidden" id="accCatalogEmpty">لا توجد نتائج حالياً. غيّري الفئة الفرعية أو جرّبي بحثاً آخر.</div>
+            </div>
+        </section>
+    </main>
+    <div id="footerMount"></div>
+    <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore-compat.js"></script>
+    <script src="firebase-config.js"></script>
+    <script src="data.js"></script>
+    <script src="shared.js"></script>
+    <script>
+        var accFilters = { subCategory: '', brand: '', search: '' };
+        document.addEventListener('DOMContentLoaded', function () {
+            AqqadStore.init({ activePage: 'accessories', navSubtitle: 'إكسسوارات وعناية بروح لطيفة' });
+            AqqadStore.onReady(function () {
+                bindAcc();
+                renderAccFilters();
+                renderAccCatalog();
+            });
+        });
+        function bindAcc() {
+            if (document.body.getAttribute('data-acc-bound') === '1') return;
+            document.body.setAttribute('data-acc-bound', '1');
+            document.getElementById('subCategoryFilter').addEventListener('change', function (event) { accFilters.subCategory = event.target.value; renderAccCatalog(); });
+            document.getElementById('accBrandFilter').addEventListener('change', function (event) { accFilters.brand = event.target.value; renderAccCatalog(); });
+            document.getElementById('accSearchFilter').addEventListener('input', function (event) { accFilters.search = normalizeSearchText(event.target.value); renderAccCatalog(); });
+        }
+        function renderAccFilters() {
+            var products = AqqadStore.getProductsByType('accessories-page');
+            var brands = {};
+            for (var i = 0; i < products.length; i += 1) brands[products[i].brand] = true;
+            document.getElementById('accBrandFilter').innerHTML = '<option value="">كل البراندات</option>' + Object.keys(brands).sort().map(function (brand) { return '<option value="' + escapeHtml(brand) + '">' + escapeHtml(brand) + '</option>'; }).join('');
+            document.getElementById('subCategoryFilter').value = accFilters.subCategory;
+            document.getElementById('accBrandFilter').value = accFilters.brand;
+        }
+        function renderAccCatalog() {
+            var products = AqqadStore.getProductsByType('accessories-page').filter(function (product) {
+                var matchesSub = !accFilters.subCategory || product.subCategory === accFilters.subCategory;
+                var matchesBrand = !accFilters.brand || product.brand === accFilters.brand;
+                var text = normalizeSearchText([product.name, product.brand, product.description].join(' '));
+                var matchesSearch = !accFilters.search || text.indexOf(accFilters.search) >= 0;
+                return matchesSub && matchesBrand && matchesSearch;
+            });
+            document.getElementById('accResultsCount').textContent = products.length + ' قطعة';
+            document.getElementById('accCatalogGrid').innerHTML = products.map(function (product) { return AqqadStore.renderProductCard(product); }).join('');
+            AqqadStore.observeNewElements();
+            document.getElementById('accCatalogEmpty').classList.toggle('hidden', products.length > 0);
+        }
+    </script>
+</body>
+</html>
+

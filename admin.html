@@ -1,179 +1,114 @@
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
-<head>
+<head><link rel="icon" type="image/png" href="logo.png">
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>لوحة الإدارة | عقاد كيدز</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800;900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="admin.css">
 </head>
 <body>
     <div class="admin-login" id="loginView">
         <div class="login-card">
-            <div class="login-logo">ع</div>
-            <span class="section-pill">عقاد كيدز</span>
-            <h1>تسجيل الدخول</h1>
-            <p>الإدارة والموظفون يمكنهم متابعة الطلبات وإدارة المتجر من هنا.</p>
-            <form id="loginForm" class="stack-form">
+            <div class="login-logo"><img src="logo.png" alt="عقاد كيدز"></div>
+            <div class="pill">الإدارة والموظفون</div>
+            <h1>مرحباً بك في لوحة عقاد كيدز</h1>
+            <p>إدارة المنتجات والطلبات والعروض والشرائح الرئيسية من مكان واحد.</p>
+            <form id="loginForm" class="admin-form stack">
                 <input id="adminUsername" type="text" placeholder="اسم المستخدم">
                 <input id="adminPassword" type="password" placeholder="كلمة المرور">
-                <button type="submit">دخول</button>
-                <div class="form-note" id="loginError"></div>
+                <button class="primary-btn" type="submit">دخول</button>
+                <div class="login-error" id="loginError"></div>
             </form>
         </div>
     </div>
 
     <div class="admin-app hidden" id="appView">
-        <aside class="sidebar">
+        <aside class="admin-sidebar">
             <div class="sidebar-brand">
-                <div class="sidebar-logo">ع</div>
+                <span class="sidebar-logo"><img src="logo.png" alt="عقاد كيدز"></span>
                 <div>
                     <strong>عقاد كيدز</strong>
                     <span id="currentUserLabel">لوحة الإدارة</span>
                 </div>
             </div>
-            <nav class="sidebar-nav">
+            <div class="sidebar-tabs">
                 <button class="tab-btn active" data-tab="dashboard">لوحة المؤشرات</button>
                 <button class="tab-btn" data-tab="products">المنتجات</button>
                 <button class="tab-btn" data-tab="orders">الطلبات</button>
                 <button class="tab-btn" data-tab="discounts">الخصومات</button>
                 <button class="tab-btn" data-tab="settings">الإعدادات</button>
+                <button class="tab-btn" data-tab="hero">شرائح الواجهة</button>
                 <button class="tab-btn" data-tab="users">المستخدمون</button>
-            </nav>
-            <button class="logout-btn" id="logoutBtn">تسجيل الخروج</button>
+            </div>
+            <button class="ghost-btn full-width" id="logoutBtn" type="button">تسجيل الخروج</button>
         </aside>
 
         <main class="admin-main">
             <header class="admin-topbar">
                 <div>
-                    <span class="section-pill">إدارة المتجر</span>
+                    <div class="pill">لوحة متكاملة</div>
                     <h1 id="tabTitle">لوحة المؤشرات</h1>
                 </div>
-                <div class="toolbar-group">
-                    <button class="ghost-btn" id="seedDataBtn">زرع البيانات</button>
-                    <button class="ghost-btn" id="refreshBtn">تحديث</button>
+                <div class="toolbar">
+                    <button class="ghost-btn" id="seedDataBtn" type="button">زرع البيانات</button>
+                    <button class="ghost-btn" id="refreshBtn" type="button">تحديث</button>
                 </div>
             </header>
-
             <div class="admin-status hidden" id="adminStatus"></div>
 
             <section class="tab-panel active" id="tab-dashboard">
                 <div class="stats-grid">
                     <div class="stat-card"><span>عدد المنتجات</span><strong id="statProducts">0</strong></div>
                     <div class="stat-card"><span>عدد الطلبات</span><strong id="statOrders">0</strong></div>
-                    <div class="stat-card"><span>إجمالي المبيعات</span><strong id="statRevenue">₪0</strong></div>
-                    <div class="stat-card"><span>مستخدمون</span><strong id="statUsers">0</strong></div>
+                    <div class="stat-card"><span>إجمالي المبيعات</span><strong id="statRevenue">₪ 0</strong></div>
+                    <div class="stat-card"><span>عدد المستخدمين</span><strong id="statUsers">0</strong></div>
                 </div>
-                <div class="charts-grid">
+                <div class="chart-grid">
                     <div class="panel-card"><h3>الطلبات حسب الحالة</h3><canvas id="ordersStatusChart"></canvas></div>
                     <div class="panel-card"><h3>الطلبات حسب المنطقة</h3><canvas id="ordersRegionChart"></canvas></div>
-                    <div class="panel-card full-span"><h3>أفضل البراندات</h3><canvas id="brandsChart"></canvas></div>
+                    <div class="panel-card full-span"><h3>توزيع البراندات</h3><canvas id="brandsChart"></canvas></div>
                 </div>
             </section>
 
             <section class="tab-panel" id="tab-products">
-                <div class="panel-card">
-                    <div class="toolbar">
-                        <div class="toolbar-group">
-                            <button class="primary-btn" id="newProductBtn">إضافة منتج</button>
-                            <button class="ghost-btn" id="exportProductsBtn">تصدير المنتجات CSV</button>
-                        </div>
-                        <div class="toolbar-group">
-                            <select id="importMode">
-                                <option value="merge">إضافة إلى الموجود</option>
-                                <option value="replace">استبدال الكل</option>
-                            </select>
-                            <input id="importProductsFile" type="file" accept=".csv,.xlsx,.xls">
-                            <button class="ghost-btn" id="importProductsBtn">استيراد CSV / Excel</button>
-                        </div>
+                <div class="panel-card stack">
+                    <div class="toolbar wrap">
+                        <button class="primary-btn" id="newProductBtn" type="button">إضافة منتج</button>
+                        <button class="ghost-btn" id="exportProductsBtn" type="button">تصدير CSV</button>
+                        <select id="importMode"><option value="merge">إضافة على الموجود</option><option value="replace">استبدال الكل</option></select>
+                        <input id="importProductsFile" type="file" accept=".csv,.xlsx,.xls">
+                        <button class="ghost-btn" id="importProductsBtn" type="button">استيراد ملف</button>
                     </div>
-                    <div class="table-wrap">
-                        <table>
-                            <thead>
-                                <tr>
-                                    <th>الاسم</th>
-                                    <th>البراند</th>
-                                    <th>الفئة</th>
-                                    <th>المقاسات</th>
-                                    <th>السعر الأساسي</th>
-                                    <th>الخصم</th>
-                                    <th>الحالة</th>
-                                    <th>إجراءات</th>
-                                </tr>
-                            </thead>
-                            <tbody id="productsTableBody"></tbody>
-                        </table>
-                    </div>
+                    <div class="table-wrap"><table><thead><tr><th>الاسم</th><th>النوع</th><th>الفئة العمرية</th><th>البراند</th><th>أول سعر</th><th>الحالة</th><th>إجراء</th></tr></thead><tbody id="productsTableBody"></tbody></table></div>
                 </div>
             </section>
 
             <section class="tab-panel" id="tab-orders">
-                <div class="panel-card">
-                    <div class="toolbar filters-wrap">
-                        <div class="toolbar-group">
-                            <input id="orderSearchInput" type="text" placeholder="رقم الطلب أو اسم الزبون">
-                            <select id="orderStatusFilter">
-                                <option value="">كل الحالات</option>
-                                <option value="new">جديد</option>
-                                <option value="preparing">قيد التحضير</option>
-                                <option value="prepared">جاهز</option>
-                                <option value="in_delivery">في التوصيل</option>
-                                <option value="completed">مكتمل</option>
-                                <option value="declined">مرفوض</option>
-                                <option value="returned">مرتجع</option>
-                            </select>
-                            <select id="orderRegionFilter">
-                                <option value="">كل المناطق</option>
-                                <option value="palestine">فلسطين</option>
-                                <option value="jordan">الأردن</option>
-                            </select>
-                            <input id="orderDateFrom" type="date">
-                            <input id="orderDateTo" type="date">
-                        </div>
-                        <div class="toolbar-group">
-                            <select id="ordersExportFormat">
-                                <option value="xlsx">Excel</option>
-                                <option value="csv">CSV</option>
-                            </select>
-                            <button class="ghost-btn" id="exportOrdersBtn">تصدير الطلبات</button>
-                        </div>
+                <div class="panel-card stack">
+                    <div class="toolbar wrap">
+                        <input id="orderSearchInput" type="text" placeholder="بحث برقم الطلب أو اسم الزبون">
+                        <select id="orderStatusFilter"><option value="">كل الحالات</option><option value="new">جديد</option><option value="preparing">قيد التحضير</option><option value="prepared">جاهز للتجهيز</option><option value="in_delivery">في الطريق</option><option value="completed">مكتمل</option><option value="declined">مرفوض</option><option value="returned">مرتجع</option></select>
+                        <select id="orderRegionFilter"><option value="">كل المناطق</option><option value="palestine">فلسطين</option><option value="jordan">الأردن</option></select>
+                        <input id="orderDateFrom" type="date">
+                        <input id="orderDateTo" type="date">
+                        <select id="ordersExportFormat"><option value="xlsx">Excel</option><option value="csv">CSV</option></select>
+                        <button class="ghost-btn" id="exportOrdersBtn" type="button">تصدير الطلبات</button>
                     </div>
-                    <div class="table-wrap">
-                        <table>
-                            <thead>
-                                <tr>
-                                    <th>رقم الطلب</th>
-                                    <th>التاريخ</th>
-                                    <th>الزبون</th>
-                                    <th>الهاتف</th>
-                                    <th>المنطقة</th>
-                                    <th>الإجمالي</th>
-                                    <th>الدفع</th>
-                                    <th>الحالة</th>
-                                    <th>العناصر</th>
-                                </tr>
-                            </thead>
-                            <tbody id="ordersTableBody"></tbody>
-                        </table>
-                    </div>
+                    <div class="table-wrap"><table><thead><tr><th>رقم الطلب</th><th>التاريخ</th><th>الزبون</th><th>الهاتف</th><th>المنطقة</th><th>الإجمالي</th><th>الدفع</th><th>الحالة</th><th>العناصر</th></tr></thead><tbody id="ordersTableBody"></tbody></table></div>
                 </div>
             </section>
 
             <section class="tab-panel" id="tab-discounts">
-                <div class="two-columns">
-                    <div class="panel-card">
+                <div class="two-col">
+                    <div class="panel-card stack">
                         <h3>إضافة أو تعديل خصم</h3>
-                        <form id="discountForm" class="stack-form">
+                        <form id="discountForm" class="admin-form stack">
                             <input id="discountId" type="hidden">
                             <input id="discountTitle" type="text" placeholder="عنوان الخصم">
-                            <select id="discountType">
-                                <option value="all">كل المنتجات</option>
-                                <option value="brand">حسب البراند</option>
-                                <option value="category">حسب الفئة</option>
-                                <option value="manual">منتجات محددة بالمعرّف</option>
-                            </select>
+                            <select id="discountType"><option value="all">كل المنتجات</option><option value="brand">براند</option><option value="type">نوع المنتج</option><option value="manual">منتجات محددة</option></select>
                             <textarea id="discountValues" rows="3" placeholder="القيم المستهدفة مفصولة بفاصلة"></textarea>
                             <input id="discountPercentage" type="number" min="0" max="90" placeholder="نسبة الخصم">
                             <input id="discountExpiry" type="date">
@@ -181,86 +116,64 @@
                             <button class="primary-btn" type="submit">حفظ الخصم</button>
                         </form>
                     </div>
-                    <div class="panel-card">
+                    <div class="panel-card stack">
                         <h3>الخصومات الحالية</h3>
-                        <div class="table-wrap">
-                            <table>
-                                <thead>
-                                    <tr>
-                                        <th>العنوان</th>
-                                        <th>النوع</th>
-                                        <th>النسبة</th>
-                                        <th>الانتهاء</th>
-                                        <th>إجراء</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="discountsTableBody"></tbody>
-                            </table>
-                        </div>
+                        <div class="table-wrap"><table><thead><tr><th>العنوان</th><th>النوع</th><th>النسبة</th><th>الانتهاء</th><th>إجراء</th></tr></thead><tbody id="discountsTableBody"></tbody></table></div>
                     </div>
                 </div>
             </section>
 
             <section class="tab-panel" id="tab-settings">
-                <div class="panel-card">
+                <div class="panel-card stack">
                     <h3>إعدادات المتجر</h3>
-                    <form id="settingsForm" class="stack-form">
-                        <div class="form-grid">
+                    <form id="settingsForm" class="admin-form stack">
+                        <div class="grid-2">
+                            <input id="settingsStoreName" type="text" placeholder="اسم المتجر">
+                            <input id="settingsHeadline" type="text" placeholder="العنوان الرئيسي">
                             <input id="settingsWhatsapp" type="text" placeholder="رقم الواتساب">
                             <input id="settingsInstagram" type="url" placeholder="رابط إنستغرام">
-                            <input id="settingsHeroSubtitle" type="text" placeholder="نص الهيرو">
-                            <input id="settingsConversionRate" type="number" min="0.01" step="0.01" placeholder="سعر تحويل 1 JOD إلى ₪">
+                            <input id="settingsHeroSubtitle" type="text" placeholder="وصف الهيرو">
+                            <input id="settingsConversionRate" type="number" min="0.01" step="0.01" placeholder="سعر تحويل الدينار">
                         </div>
                         <textarea id="settingsAbout" rows="4" placeholder="نبذة عن المتجر"></textarea>
-                        <div class="delivery-editor">
-                            <h4>مناطق التوصيل - فلسطين</h4>
-                            <div id="deliveryRegionsPalestine"></div>
-                            <button type="button" class="ghost-btn" onclick="addDeliveryRow('palestine')">إضافة منطقة</button>
-                        </div>
-                        <div class="delivery-editor">
-                            <h4>مناطق التوصيل - الأردن</h4>
-                            <div id="deliveryRegionsJordan"></div>
-                            <button type="button" class="ghost-btn" onclick="addDeliveryRow('jordan')">إضافة منطقة</button>
-                        </div>
-                        <div class="checkbox-group">
-                            <label><input id="paymentCod" type="checkbox"> الدفع عند الاستلام</label>
-                            <label><input id="paymentVisa" type="checkbox"> بطاقة ائتمان</label>
-                        </div>
+                        <div class="sub-block stack"><h4>مناطق التوصيل - فلسطين</h4><div id="deliveryRegionsPalestine"></div><button class="ghost-btn" type="button" onclick="addDeliveryRow('palestine')">إضافة منطقة</button></div>
+                        <div class="sub-block stack"><h4>مناطق التوصيل - الأردن</h4><div id="deliveryRegionsJordan"></div><button class="ghost-btn" type="button" onclick="addDeliveryRow('jordan')">إضافة منطقة</button></div>
+                        <div class="check-row"><label><input id="paymentCod" type="checkbox"> الدفع عند الاستلام</label><label><input id="paymentVisa" type="checkbox"> بطاقة فيزا</label></div>
                         <button class="primary-btn" type="submit">حفظ الإعدادات</button>
                     </form>
                 </div>
             </section>
 
+            <section class="tab-panel" id="tab-hero">
+                <div class="two-col">
+                    <div class="panel-card stack">
+                        <h3>إضافة شريحة جديدة</h3>
+                        <p class="muted">ارفعي صورة أو GIF أو فيديو قصير بصيغة MP4. سيتم حفظه محلياً داخل Firestore كـ base64.</p>
+                        <input id="heroSlidesUploader" type="file" accept="image/*,image/gif,video/mp4" multiple>
+                        <button class="primary-btn" id="saveHeroSlidesBtn" type="button">حفظ الشرائح الحالية</button>
+                    </div>
+                    <div class="panel-card stack">
+                        <h3>الترتيب بالسحب والإفلات</h3>
+                        <div id="heroSlidesList" class="hero-list"></div>
+                    </div>
+                </div>
+            </section>
+
             <section class="tab-panel" id="tab-users">
-                <div class="two-columns">
-                    <div class="panel-card">
+                <div class="two-col">
+                    <div class="panel-card stack">
                         <h3>إضافة أو تعديل مستخدم</h3>
-                        <form id="userForm" class="stack-form">
+                        <form id="userForm" class="admin-form stack">
                             <input id="userUsername" type="text" placeholder="اسم المستخدم">
                             <input id="userName" type="text" placeholder="الاسم الظاهر">
                             <input id="userPassword" type="text" placeholder="كلمة المرور">
-                            <select id="userRole">
-                                <option value="admin">مدير</option>
-                                <option value="worker">موظف</option>
-                            </select>
+                            <select id="userRole"><option value="admin">مدير</option><option value="worker">موظف</option></select>
                             <button class="primary-btn" type="submit">حفظ المستخدم</button>
                         </form>
                     </div>
-                    <div class="panel-card">
+                    <div class="panel-card stack">
                         <h3>المستخدمون الحاليون</h3>
-                        <div class="table-wrap">
-                            <table>
-                                <thead>
-                                    <tr>
-                                        <th>اسم المستخدم</th>
-                                        <th>الاسم</th>
-                                        <th>الدور</th>
-                                        <th>إجراء</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="usersTableBody"></tbody>
-                            </table>
-                        </div>
+                        <div class="table-wrap"><table><thead><tr><th>اسم المستخدم</th><th>الاسم</th><th>الدور</th><th>إجراء</th></tr></thead><tbody id="usersTableBody"></tbody></table></div>
                     </div>
                 </div>
             </section>
@@ -270,27 +183,24 @@
     <div class="modal hidden" id="productModal">
         <div class="modal-backdrop" data-close-modal="productModal"></div>
         <div class="modal-dialog">
-            <button class="modal-close" data-close-modal="productModal">✕</button>
+            <button class="modal-close" data-close-modal="productModal" type="button">✕</button>
             <h3 id="productModalTitle">إضافة منتج</h3>
-            <form id="productForm" class="stack-form">
+            <form id="productForm" class="admin-form stack">
                 <input id="productOriginalId" type="hidden">
-                <div class="form-grid">
+                <div class="grid-2">
                     <input id="productId" type="text" placeholder="معرّف المنتج">
                     <input id="productName" type="text" placeholder="اسم المنتج">
+                    <select id="productType"><option value="clothes">ملابس</option><option value="shoes">أحذية</option><option value="accessories">إكسسوارات</option><option value="creams">عناية وعطور</option></select>
+                    <select id="productAgeGroup"><option value="">بدون</option><option value="baby">حديثي الولادة</option><option value="toddler">طفل صغير</option><option value="kids">أطفال</option><option value="teens">مراهقين</option></select>
+                    <select id="productSubCategory"><option value="accessories">إكسسوارات</option><option value="creams">كريمات</option><option value="perfumes">عطور</option></select>
                     <input id="productBrand" type="text" placeholder="البراند">
-                    <input id="productCategory" type="text" placeholder="الفئة">
-                    <select id="productStatus">
-                        <option value="active">متوفر</option>
-                        <option value="bestseller">الأكثر طلباً</option>
-                        <option value="special">مميز</option>
-                        <option value="soldout">نفد</option>
-                    </select>
+                    <select id="productStatus"><option value="normal">متوفر</option><option value="bestseller">الأكثر طلباً</option><option value="special">قطعة مميزة</option><option value="soldout">نفدت الكمية</option></select>
                     <input id="productDiscount" type="number" min="0" max="90" placeholder="خصم أساسي %">
                 </div>
                 <input id="productImage" type="url" placeholder="رابط الصورة">
                 <textarea id="productDescription" rows="3" placeholder="وصف المنتج"></textarea>
-                <textarea id="productSizes" rows="4" placeholder="المقاسات مفصولة بفاصلة، مثال: 1-2 سنة,2-3 سنة"></textarea>
-                <textarea id="productPrices" rows="4" placeholder="الأسعار الأساسية بالشيكل مفصولة بفاصلة وبنفس ترتيب المقاسات"></textarea>
+                <textarea id="productSizes" rows="3" placeholder="المقاسات مفصولة بفاصلة"></textarea>
+                <textarea id="productPrices" rows="3" placeholder="الأسعار الأساسية بالشيكل وبنفس ترتيب المقاسات"></textarea>
                 <button class="primary-btn" type="submit">حفظ المنتج</button>
             </form>
         </div>

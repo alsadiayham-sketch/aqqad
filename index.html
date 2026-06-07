@@ -1,250 +1,189 @@
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
-<head>
+<head><link rel="icon" type="image/png" href="logo.png">
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>عقاد كيدز | Aqqad Kids</title>
-    <meta name="description" content="عقاد كيدز - متجر عربي فاخر لملابس الأطفال والأحذية والإكسسوارات والكريمات والعطور مع دعم فلسطين والأردن.">
+    <title>عقاد كيدز | متجر طفولي فاخر</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="shared.css">
 </head>
 <body>
-    <header class="site-header" id="top">
-        <div class="container navbar">
-            <a href="#top" class="brand">
-                <span class="brand-mark">ع</span>
-                <div>
-                    <strong>عقاد كيدز</strong>
-                    <span>Aqqad Kids</span>
-                </div>
-            </a>
-            <nav class="desktop-nav desktop-only">
-                <a href="#products">المنتجات</a>
-                <a href="#about">عن المتجر</a>
-                <a href="#delivery">التوصيل</a>
-                <a href="#tracking">تتبع الطلب</a>
-                <a href="#contact">تواصل</a>
-            </nav>
-            <div class="navbar-actions">
-                <div class="region-switcher-wrap">
-                    <label for="regionSelector">المنطقة</label>
-                    <select id="regionSelector">
-                        <option value="palestine">فلسطين</option>
-                        <option value="jordan">الأردن</option>
-                    </select>
-                </div>
-                <button class="icon-btn mobile-only" id="mobileMenuToggle" aria-label="القائمة">☰</button>
-                <button class="icon-btn cart-btn" id="openCartBtn" aria-label="السلة">
-                    <span>🛍️</span>
-                    <span class="cart-count" id="cartCount">0</span>
-                </button>
-            </div>
-        </div>
-        <div class="mobile-menu" id="mobileMenu">
-            <a href="#products">المنتجات</a>
-            <a href="#about">عن المتجر</a>
-            <a href="#delivery">التوصيل</a>
-            <a href="#tracking">تتبع الطلب</a>
-            <a href="#contact">تواصل</a>
-        </div>
-    </header>
-
-    <main>
-        <section class="hero-section">
-            <div class="container hero-grid">
-                <div class="hero-copy">
-                    <span class="section-pill">Luxury Kids Store</span>
-                    <h1>عقاد كيدز</h1>
-                    <p class="hero-subtitle" id="heroSubtitle">خلّي الأطفال يكونوا أطفال</p>
-                    <div class="hero-taglines" id="heroTaglines">
-                        <span>خلّي الأطفال يكونوا أطفال</span>
-                        <span>نفتخر بأطفالك</span>
-                        <span>Let Kids Be Kids</span>
-                    </div>
-                    <div class="hero-actions">
-                        <a href="#products" class="btn btn-primary">ابدئي التسوق</a>
-                        <a id="heroInstagramLink" href="https://www.instagram.com/aqqadkids/" target="_blank" rel="noopener" class="btn btn-secondary">إنستغرام</a>
-                    </div>
-                    <div class="hero-stats">
-                        <div class="stat-card">
-                            <strong>ملابس</strong>
-                            <span>من حديثي الولادة حتى 15 سنة</span>
+    <div class="deco-watermarks">
+        <div class="deco-text one">خلّوا الطفولة تضحك</div>
+        <div class="deco-text two">أناقة صغيرة بحب كبير</div>
+        <div class="deco-text three">تفاصيل تليق بأيامهم</div>
+    </div>
+    <div id="navbarMount"></div>
+    <main class="page-shell">
+        <section class="section section-tight">
+            <div class="container hero-stage">
+                <div class="floating-spark" style="top:80px;right:10%;"></div>
+                <div class="floating-spark" style="top:180px;left:14%;animation-delay:1s;"></div>
+                <div class="floating-orb" style="width:140px;height:140px;top:34px;left:8%;"></div>
+                <div class="floating-orb" style="width:180px;height:180px;bottom:34px;right:5%;animation-delay:1.4s;"></div>
+                <div class="hero-shell" id="heroShell" data-animate>
+                    <div class="hero-slides" id="heroSlides"></div>
+                    <div class="hero-content">
+                        <div class="hero-copy">
+                            <div class="pill-label"><span class="dot"></span>مجموعة جديدة كلما كبروا أكثر</div>
+                            <h1><span class="gradient-text" id="heroStoreHeadline">ألوان طفولية بلمسة فاخرة</span><br>لخطواتهم الأولى وأيامهم المبهجة</h1>
+                            <span class="hero-slide-text" id="heroOverlayText">تشكيلة الموسم لأجمل يومياتهم</span>
+                            <p id="heroLead">تشكيلات ناعمة، خطوات مريحة، وتفاصيل تجعل كل إطلالة قصة صغيرة جميلة.</p>
+                            <div class="action-row">
+                                <a class="btn btn-primary" href="#featured">ابدئي التسوّق الآن</a>
+                                <a class="btn btn-secondary" href="checkout.html">إتمام الطلب</a>
+                                <a class="btn btn-accent" id="heroQuickLink" href="#">استشارة عبر واتساب</a>
+                            </div>
+                            <div class="hero-stat-grid" id="heroStats"></div>
                         </div>
-                        <div class="stat-card">
-                            <strong>أحذية وإكسسوارات</strong>
-                            <span>تفاصيل أنيقة لكل إطلالة</span>
+                        <div class="hero-side-card">
+                            <div class="inner">
+                                <h3>موسم مليء بالطبقات اللطيفة</h3>
+                                <p style="margin:0;color:var(--muted)">من الرومبرات الناعمة إلى الأحذية المرنة والإكسسوارات اليومية، صممنا الواجهة لتشعركِ وكأنكِ تتصفحين مجلة طفولية حيّة.</p>
+                                <div class="hero-mini-gallery">
+                                    <div class="tile mesh-surface"><strong>ملابس</strong><div style="color:var(--muted)">قصّات واسعة وتفاصيل مرحة</div></div>
+                                    <div class="tile mesh-surface"><strong>أحذية</strong><div style="color:var(--muted)">راحة وثبات لكل خطوة</div></div>
+                                    <div class="tile mesh-surface"><strong>عناية</strong><div style="color:var(--muted)">روائح وخامات دافئة</div></div>
+                                    <div class="tile mesh-surface"><strong>إكسسوارات</strong><div style="color:var(--muted)">لمعة صغيرة تكمل الإطلالة</div></div>
+                                </div>
+                            </div>
                         </div>
                     </div>
-                </div>
-                <div class="hero-showcase">
-                    <div class="showcase-card">
-                        <span class="floating-badge" id="heroRegionBadge">فلسطين • ₪</span>
-                        <h3>إطلالات يومية دافئة بلمسة بيج وذهبي</h3>
-                        <p>تشكيلة راقية ومريحة للأولاد والبنات، مع خيارات توصيل واضحة ودعم متعدد المناطق.</p>
-                        <ul>
-                            <li>ملابس أطفال مريحة</li>
-                            <li>أحذية بمقاسات 16 - 30</li>
-                            <li>إكسسوارات وعناية مختارة</li>
-                        </ul>
-                    </div>
+                    <div class="hero-dots" id="heroDots"></div>
                 </div>
             </div>
         </section>
 
-        <section class="section brands-section">
+        <section class="section" id="categories">
             <div class="container">
-                <div class="section-head centered">
-                    <span class="section-pill">ماركات أطفال</span>
-                    <h2>أسماء محبوبة من عالم الأطفال</h2>
-                </div>
-                <div class="brands-grid" id="brandsGrid"></div>
-            </div>
-        </section>
-
-        <section class="section products-section" id="products">
-            <div class="container">
-                <div class="section-head">
+                <div class="section-heading" data-animate>
                     <div>
-                        <span class="section-pill">تسوقي الآن</span>
-                        <h2>منتجات أطفال مختارة بعناية</h2>
+                        <div class="pill-label"><span class="dot"></span>ثلاثة عوالم داخل المتجر</div>
+                        <h2>اختاري المزاج الذي يشبه صغيرك اليوم</h2>
                     </div>
-                    <p class="section-copy">اختاري حسب الفئة أو ابحثي مباشرة عن المنتج المناسب لطفلك.</p>
+                    <p>صممنا الأقسام كأنها بطاقات قصصية: ناعمة، مرحة، ومليئة بالحركة الدقيقة لتجعل التسوق أجمل وأكثر وضوحاً.</p>
                 </div>
-                <div class="toolbar-card">
-                    <div class="toolbar-search">
-                        <input type="search" id="searchInput" placeholder="ابحثي بالاسم أو البراند أو الفئة">
+                <div class="category-grid">
+                    <a class="category-card clothes" href="clothes.html" data-animate>
+                        <div class="pill-label"><span class="dot"></span>الملابس</div>
+                        <h3>طبقات تواكب اللعب والضحك</h3>
+                        <p>من حديثي الولادة وحتى المراهقين، مقاسات واضحة وقطع جاهزة لصور المدرسة والعيد واليوميات.</p>
+                        <span class="btn btn-secondary">استكشفي القسم</span>
+                    </a>
+                    <a class="category-card shoes" href="shoes.html" data-animate>
+                        <div class="pill-label"><span class="dot"></span>الأحذية</div>
+                        <h3>خطوات مرنة وخفيفة</h3>
+                        <p>أحذية أول خطوة، صنادل صيفية، وسنيكر يومي يمنح الطفل راحة وأناقة في الوقت نفسه.</p>
+                        <span class="btn btn-secondary">شاهدي الأحذية</span>
+                    </a>
+                    <a class="category-card accessories" href="accessories.html" data-animate>
+                        <div class="pill-label"><span class="dot"></span>الإكسسوارات والعناية</div>
+                        <h3>التفاصيل التي تكمل الحكاية</h3>
+                        <p>حقائب صغيرة، أطواق، كريمات، وبخاخات لطيفة تمنح كل يوم لمسة عناية وبهجة.</p>
+                        <span class="btn btn-secondary">دخولي إلى العالم اللطيف</span>
+                    </a>
+                </div>
+            </div>
+            <div class="wave-divider"></div>
+        </section>
+
+        <section class="section featured-section" id="featured">
+            <div class="container stack">
+                <div class="section-heading" data-animate>
+                    <div>
+                        <div class="pill-label"><span class="dot"></span>مختاراتنا هذا الأسبوع</div>
+                        <h2>أكثر القطع التي أحبّتها العائلات</h2>
                     </div>
-                    <div class="category-filters" id="categoryFilters"></div>
+                    <p>أربع قطع من كل عالم لتشاهدي نبض المتجر بسرعة قبل الغوص في بقية التفاصيل.</p>
                 </div>
-                <div class="status-note hidden" id="storeNotice"></div>
-                <div class="products-grid" id="productsGrid"></div>
-                <div class="empty-state hidden" id="emptyProductsState">
-                    <h3>لا توجد منتجات مطابقة حالياً</h3>
-                    <p>جرّبي تغيير الفئة أو كتابة اسم آخر في البحث.</p>
+
+                <div class="stack" data-animate>
+                    <div class="section-heading">
+                        <div>
+                            <h2>ملابس تخطف القلب من أول نظرة</h2>
+                            <p>تصاميم ناعمة بلون سكري، لافندر، وبيج دافئ.</p>
+                        </div>
+                        <a class="btn btn-secondary" href="clothes.html">عرض الكل</a>
+                    </div>
+                    <div class="products-grid" id="featuredClothes"></div>
+                </div>
+
+                <div class="stack" data-animate>
+                    <div class="section-heading">
+                        <div>
+                            <h2>أحذية خفيفة بخطوط واثقة</h2>
+                            <p>للحضانة، للمدرسة، وللركض السريع في الحدائق.</p>
+                        </div>
+                        <a class="btn btn-secondary" href="shoes.html">عرض الكل</a>
+                    </div>
+                    <div class="products-grid" id="featuredShoes"></div>
+                </div>
+
+                <div class="stack" data-animate>
+                    <div class="section-heading">
+                        <div>
+                            <h2>إكسسوارات وعناية بروح دافئة</h2>
+                            <p>لمسات أخيرة تجعل الروتين اليومي أجمل وأهدأ.</p>
+                        </div>
+                        <a class="btn btn-secondary" href="accessories.html">عرض الكل</a>
+                    </div>
+                    <div class="products-grid" id="featuredAccessories"></div>
                 </div>
             </div>
         </section>
 
-        <section class="section about-section" id="about">
-            <div class="container split-grid">
-                <div class="soft-card">
-                    <span class="section-pill">عن المتجر</span>
-                    <h2>عقاد كيدز ... مساحة جميلة لأناقة الأطفال</h2>
-                    <p id="aboutText">عقاد كيدز متجر أطفال بلمسة دافئة وفاخرة، يقدّم ملابس وأحذية وإكسسوارات وكريمات وعطور مختارة بعناية لترافق طفلك في كل يوم جميل.</p>
-                </div>
-                <div class="soft-card highlight-card">
-                    <h3>ليش الأهالي بحبوا Aqqad Kids؟</h3>
-                    <ul class="check-list">
-                        <li>تصاميم مريحة وتفاصيل لطيفة تناسب الأطفال.</li>
-                        <li>مقاسات واضحة للملابس والأحذية.</li>
-                        <li>توصيل مرن لفلسطين والأردن مع أسعار ظاهرة.</li>
-                        <li>طلب سهل، تتبع سريع، وخدمة واتساب مباشرة.</li>
+        <section class="section">
+            <div class="container two-up">
+                <div class="story-card mesh-surface blob-card" data-animate>
+                    <div class="pill-label"><span class="dot"></span>قصتنا</div>
+                    <h2 style="margin:14px 0 10px">متجر يولد من تفاصيل البيت الدافئ</h2>
+                    <p id="aboutText">عقاد كيدز مساحة طفولية دافئة تجمع بين الأناقة والراحة.</p>
+                    <ul class="info-list">
+                        <li><span>ألوان رئيسية</span><strong>بيج ذهبي مع لمسات مينت ولافندر</strong></li>
+                        <li><span>الطلب</span><strong>سلة سهلة + واتساب + متابعة حالة الطلب</strong></li>
+                        <li><span>المناطق</span><strong>فلسطين والأردن مع تحويل تلقائي للعملة</strong></li>
                     </ul>
                 </div>
+                <div class="instagram-card glass-card" data-animate>
+                    <div class="pill-label"><span class="dot"></span>لمحة إنستغرام</div>
+                    <h2 style="margin:14px 0 10px">واجهيتنا تقول للزائر: هنا كل شيء جاهز للصورة القادمة</h2>
+                    <p style="color:var(--muted)">أضفنا مساحة مرئية تشبه نبض إنستغرام: بطاقات متداخلة، ألوان مرحة، وحركة خفيفة توحي بأن هناك دائماً شيئاً جديداً يستحق المشاركة.</p>
+                    <div class="soft-grid" style="margin-top:18px">
+                        <div class="notice-card mesh-surface"><strong>جلسات تصوير صغيرة</strong><div style="color:var(--muted)">كل قطعة تبدو جاهزة لصورة عائلية حالمة.</div></div>
+                        <div class="notice-card mesh-surface"><strong>روابط مباشرة</strong><div style="color:var(--muted)">انتقلي من الإلهام إلى الشراء بلا تعقيد.</div></div>
+                    </div>
+                    <div class="action-row" style="margin-top:18px">
+                        <a class="btn btn-primary" id="instagramHintLink" href="#" target="_blank" rel="noopener">زيارة الإنستغرام</a>
+                        <a class="btn btn-secondary" id="whatsappInfoLink" href="#" target="_blank" rel="noopener">اسألي عن المقاسات</a>
+                    </div>
+                </div>
             </div>
         </section>
 
-        <section class="section delivery-section" id="delivery">
+        <section class="section" id="tracking">
             <div class="container">
-                <div class="section-head centered">
-                    <span class="section-pill">التوصيل</span>
-                    <h2>خيارات التوصيل حسب المنطقة</h2>
-                    <p id="deliveryRegionSummary">الأسعار المعروضة حالياً لفلسطين.</p>
-                </div>
-                <div class="delivery-grid" id="deliveryGrid"></div>
-            </div>
-        </section>
-
-        <section class="section tracking-section" id="tracking">
-            <div class="container split-grid">
-                <div class="soft-card">
-                    <span class="section-pill">تتبع الطلب</span>
-                    <h2>أين وصل طلبك؟</h2>
-                    <p>أدخلي رقم الطلب كما وصلك بعد التأكيد، وسنظهر لكِ آخر حالة مباشرة.</p>
-                    <div class="tracking-form">
-                        <input type="text" id="trackingInput" placeholder="مثال: AQ-ABC123">
-                        <button class="btn btn-primary" id="trackOrderBtn">تتبع الآن</button>
-                    </div>
+                <div class="tracking-card glass-card" data-animate>
+                    <div class="pill-label"><span class="dot"></span>تتبّع الطلب</div>
+                    <h2 style="margin:14px 0 10px">كل مرحلة واضحة أمامك</h2>
+                    <p style="margin:0;color:var(--muted)">اكتبي رقم الطلب لتشاهدي آخر تحديث، ثم اتركي لنا مهمة تجهيز الباقي.</p>
+                    <form class="tracking-form" id="trackingForm" style="margin-top:18px">
+                        <input id="trackingInput" type="text" placeholder="مثال: AQ-7M4K2P">
+                        <button class="btn btn-primary" type="submit">تتبّع الآن</button>
+                    </form>
                     <div class="tracking-result hidden" id="trackingResult"></div>
-                </div>
-                <div class="soft-card">
-                    <h3>حالات الطلب المتاحة</h3>
-                    <div class="status-flow">
-                        <span>جديد</span>
-                        <span>قيد التحضير</span>
-                        <span>جاهز</span>
-                        <span>في التوصيل</span>
-                        <span>مكتمل</span>
-                    </div>
-                </div>
-            </div>
-        </section>
-
-        <section class="section contact-section" id="contact">
-            <div class="container split-grid">
-                <div class="soft-card">
-                    <span class="section-pill">تواصل معنا</span>
-                    <h2>خدمة سريعة عبر الواتساب والإنستغرام</h2>
-                    <ul class="contact-list">
-                        <li><strong>واتساب:</strong> <a id="whatsappLink" href="https://wa.me/972569236758" target="_blank" rel="noopener">972569236758</a></li>
-                        <li><strong>إنستغرام:</strong> <a id="instagramLink" href="https://www.instagram.com/aqqadkids/" target="_blank" rel="noopener">@aqqadkids</a></li>
-                        <li><strong>الشعار:</strong> خلّي الأطفال يكونوا أطفال</li>
-                        <li><strong>رسالتنا:</strong> نفتخر بأطفالك</li>
-                    </ul>
-                </div>
-                <div class="soft-card social-proof-card">
-                    <h3>تجربة أنيقة ومريحة</h3>
-                    <p>تابعي الجديد أولاً بأول وشاركي أطفالك إطلالات يومية تجمع بين الراحة والذوق الجميل.</p>
-                    <a class="btn btn-secondary" href="admin.html">لوحة الإدارة</a>
                 </div>
             </div>
         </section>
     </main>
-
-    <footer class="site-footer">
-        <div class="container footer-inner">
-            <div>
-                <strong>عقاد كيدز</strong>
-                <p>خلّي الأطفال يكونوا أطفال</p>
-            </div>
-            <div>
-                <p id="footerRegionText">فلسطين • ₪</p>
-                <p>واتساب: 972569236758</p>
-            </div>
-        </div>
-    </footer>
-
-    <div class="cart-overlay" id="cartOverlay"></div>
-    <aside class="cart-sidebar" id="cartSidebar">
-        <div class="cart-header">
-            <h3>سلة المشتريات</h3>
-            <button class="icon-btn" id="closeCartBtn">✕</button>
-        </div>
-        <div class="cart-items" id="cartItems"></div>
-        <div class="empty-cart hidden" id="emptyCart">السلة فارغة حالياً.</div>
-        <div class="cart-footer">
-            <div class="cart-total-row">
-                <span>الإجمالي</span>
-                <strong id="cartTotal">₪0</strong>
-            </div>
-            <a href="checkout.html" class="btn btn-primary full-width">إتمام الطلب</a>
-        </div>
-    </aside>
-
-    <div class="modal hidden" id="productModal">
-        <div class="modal-backdrop" id="productModalBackdrop"></div>
-        <div class="modal-dialog">
-            <button class="icon-btn modal-close" id="productModalClose">✕</button>
-            <div id="productModalBody"></div>
-        </div>
-    </div>
+    <div id="footerMount"></div>
 
     <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore-compat.js"></script>
     <script src="firebase-config.js"></script>
     <script src="data.js"></script>
+    <script src="shared.js"></script>
     <script src="script.js"></script>
 </body>
 </html>

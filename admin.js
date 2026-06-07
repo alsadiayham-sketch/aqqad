@@ -6,10 +6,12 @@ var adminState = {
     orders: [],
     settings: normalizeSettings(DEFAULT_SITE_SETTINGS),
     users: normalizeUsersDoc({}),
-    charts: {}
+    heroSlides: normalizeHeroSlidesDoc(getDefaultHeroSlidesDoc()).slides,
+    charts: {},
+    subscriptionsStarted: false
 };
-var adminReady = { products: false, discounts: false, orders: false, settings: false, users: false };
 var productModalEl = null;
+var draggedHeroId = '';
 
 document.addEventListener('DOMContentLoaded', function () {
     bindAdminEvents();
@@ -23,11 +25,7 @@ function bindAdminEvents() {
     document.getElementById('seedDataBtn').addEventListener('click', function () {
         if (!window.db) return;
         setAdminStatus('جاري زرع البيانات...', '');
-        seedFirestoreData(true).then(function () {
-            setAdminStatus('تم زرع البيانات بنجاح.', 'success');
-        }).catch(function () {
-            setAdminStatus('تعذر زرع البيانات.', 'error');
-        });
+        seedFirestoreData(true).then(function () { setAdminStatus('تم زرع البيانات بنجاح.', 'success'); }).catch(function () { setAdminStatus('تعذر زرع البيانات.', 'error'); });
     });
     document.getElementById('newProductBtn').addEventListener('click', function () { openProductModal(); });
     document.getElementById('productForm').addEventListener('submit', saveProduct);
@@ -42,6 +40,8 @@ function bindAdminEvents() {
     document.getElementById('orderRegionFilter').addEventListener('change', renderOrdersTable);
     document.getElementById('orderDateFrom').addEventListener('change', renderOrdersTable);
     document.getElementById('orderDateTo').addEventListener('change', renderOrdersTable);
+    document.getElementById('heroSlidesUploader').addEventListener('change', uploadHeroFiles);
+    document.getElementById('saveHeroSlidesBtn').addEventListener('click', persistHeroSlides);
     productModalEl = document.getElementById('productModal');
     document.body.addEventListener('click', function (event) {
         var closeTarget = event.target.getAttribute('data-close-modal');
@@ -49,28 +49,24 @@ function bindAdminEvents() {
     });
     var tabs = document.querySelectorAll('.tab-btn');
     for (var i = 0; i < tabs.length; i += 1) {
-        tabs[i].addEventListener('click', function (event) {
-            switchTab(event.currentTarget.getAttribute('data-tab'));
-        });
+        tabs[i].addEventListener('click', function (event) { switchTab(event.currentTarget.getAttribute('data-tab')); });
     }
 }
 
 function setAdminStatus(message, type) {
     var node = document.getElementById('adminStatus');
-    if (!node) return;
     if (!message) {
         node.className = 'admin-status hidden';
         node.textContent = '';
+        node.style.color = '';
         return;
     }
     node.className = 'admin-status';
-    node.style.color = type === 'error' ? '#991b1b' : '';
     node.textContent = message;
+    node.style.color = type === 'error' ? '#9f1d35' : '#8f6128';
 }
 
-function saveSession(user) {
-    sessionStorage.setItem(ADMIN_SESSION_KEY, JSON.stringify(user));
-}
+function saveSession(user) { sessionStorage.setItem(ADMIN_SESSION_KEY, JSON.stringify(user)); }
 
 function restoreSession() {
     var payload = sessionStorage.getItem(ADMIN_SESSION_KEY);
@@ -92,46 +88,33 @@ function handleLogin(event) {
     event.preventDefault();
     var username = String(document.getElementById('adminUsername').value || '').trim();
     var password = String(document.getElementById('adminPassword').value || '').trim();
-    if (!username || !password) {
-        document.getElementById('loginError').textContent = 'يرجى إدخال اسم المستخدم وكلمة المرور.';
-        return;
-    }
-    if (!window.db) {
-        document.getElementById('loginError').textContent = 'فايربيس غير متاح حالياً.';
-        return;
-    }
+    var errorNode = document.getElementById('loginError');
+    if (!username || !password) { errorNode.textContent = 'أدخلي اسم المستخدم وكلمة المرور.'; return; }
+    if (!window.db) { errorNode.textContent = 'فايربيس غير متاح حالياً.'; return; }
     db.collection('settings').doc('users').get().then(function (docSnap) {
         var users = normalizeUsersDoc(docSnap.exists ? docSnap.data() : {});
         var record = users[username];
-        if (!record || record.password !== password) {
-            document.getElementById('loginError').textContent = 'بيانات الدخول غير صحيحة.';
-            return;
-        }
+        if (!record || record.password !== password) { errorNode.textContent = 'بيانات الدخول غير صحيحة.'; return; }
         adminState.currentUser = { username: username, role: record.role, name: record.name || username };
         adminState.currentRole = record.role;
         saveSession(adminState.currentUser);
         showAdminApp();
         initializeAdmin();
-    }).catch(function () {
-        document.getElementById('loginError').textContent = 'تعذر التحقق من المستخدمين.';
-    });
+    }).catch(function () { errorNode.textContent = 'تعذر التحقق من المستخدم.'; });
 }
 
 function showAdminApp() {
     document.getElementById('loginView').classList.add('hidden');
     document.getElementById('appView').classList.remove('hidden');
-    document.getElementById('currentUserLabel').textContent = (adminState.currentUser ? adminState.currentUser.name : '') + ' - ' + (adminState.currentRole === 'worker' ? 'موظف' : 'مدير');
+    document.getElementById('currentUserLabel').textContent = (adminState.currentUser ? adminState.currentUser.name : '') + ' - ' + (adminState.currentRole === 'worker' ? 'موظف الطلبات' : 'مدير');
     applyRolePermissions();
 }
 
-function logoutAdmin() {
-    sessionStorage.removeItem(ADMIN_SESSION_KEY);
-    window.location.reload();
-}
+function logoutAdmin() { sessionStorage.removeItem(ADMIN_SESSION_KEY); window.location.reload(); }
 
 function applyRolePermissions() {
     var isWorker = adminState.currentRole === 'worker';
-    var hiddenTabs = ['dashboard', 'products', 'discounts', 'settings', 'users'];
+    var hiddenTabs = ['dashboard', 'products', 'discounts', 'settings', 'hero', 'users'];
     var buttons = document.querySelectorAll('.tab-btn');
     for (var i = 0; i < buttons.length; i += 1) {
         var tab = buttons[i].getAttribute('data-tab');
@@ -144,24 +127,16 @@ function applyRolePermissions() {
 function switchTab(tab) {
     var buttons = document.querySelectorAll('.tab-btn');
     var panels = document.querySelectorAll('.tab-panel');
-    for (var i = 0; i < buttons.length; i += 1) {
-        buttons[i].classList.toggle('active', buttons[i].getAttribute('data-tab') === tab);
-    }
-    for (var j = 0; j < panels.length; j += 1) {
-        panels[j].classList.toggle('active', panels[j].id === 'tab-' + tab);
-    }
-    document.getElementById('tabTitle').textContent = tab === 'dashboard' ? 'لوحة المؤشرات' : tab === 'products' ? 'إدارة المنتجات' : tab === 'orders' ? 'إدارة الطلبات' : tab === 'discounts' ? 'الخصومات' : tab === 'settings' ? 'الإعدادات' : 'المستخدمون';
+    for (var i = 0; i < buttons.length; i += 1) buttons[i].classList.toggle('active', buttons[i].getAttribute('data-tab') === tab);
+    for (var j = 0; j < panels.length; j += 1) panels[j].classList.toggle('active', panels[j].id === 'tab-' + tab);
+    var titles = { dashboard: 'لوحة المؤشرات', products: 'إدارة المنتجات', orders: 'إدارة الطلبات', discounts: 'إدارة الخصومات', settings: 'إعدادات المتجر', hero: 'شرائح الواجهة الرئيسية', users: 'إدارة المستخدمين' };
+    document.getElementById('tabTitle').textContent = titles[tab] || 'لوحة الإدارة';
 }
 
 function initializeAdmin() {
-    if (!window.db) {
-        setAdminStatus('فايربيس غير متاح.', 'error');
-        return;
-    }
+    if (!window.db) { setAdminStatus('فايربيس غير متاح.', 'error'); return; }
     setAdminStatus('جاري تحميل البيانات...', '');
-    ensureDefaults().then(subscribeData).catch(function () {
-        setAdminStatus('تعذر تهيئة المشروع.', 'error');
-    });
+    ensureDefaults().then(function () { if (!adminState.subscriptionsStarted) subscribeData(); }).catch(function () { setAdminStatus('تعذر تهيئة المشروع.', 'error'); });
 }
 
 function ensureDefaults() {
@@ -174,6 +149,11 @@ function ensureDefaults() {
         if (!configDoc.exists) return db.collection('settings').doc('config').set(normalizeSettings(DEFAULT_SITE_SETTINGS));
         return null;
     }).then(function () {
+        return db.collection('settings').doc('heroSlides').get();
+    }).then(function (heroDoc) {
+        if (!heroDoc.exists) return db.collection('settings').doc('heroSlides').set(normalizeHeroSlidesDoc(getDefaultHeroSlidesDoc()));
+        return null;
+    }).then(function () {
         return db.collection('products').limit(1).get();
     }).then(function (snapshot) {
         if (snapshot.empty) return seedFirestoreData(false);
@@ -182,34 +162,35 @@ function ensureDefaults() {
 }
 
 function subscribeData() {
+    adminState.subscriptionsStarted = true;
     db.collection('products').onSnapshot(function (snapshot) {
         adminState.products = snapshot.docs.map(function (docSnap) { var data = docSnap.data(); data.id = docSnap.id; return normalizeProduct(data); });
-        adminReady.products = true;
         renderProductsTable();
         renderDashboard();
         setAdminStatus('', '');
     });
     db.collection('discounts').onSnapshot(function (snapshot) {
         adminState.discounts = snapshot.docs.map(function (docSnap) { var data = docSnap.data(); data.id = docSnap.id; return normalizeDiscount(data); });
-        adminReady.discounts = true;
         renderDiscountsTable();
     });
     db.collection('orders').onSnapshot(function (snapshot) {
         adminState.orders = snapshot.docs.map(function (docSnap) { var data = docSnap.data(); data._docId = docSnap.id; return data; });
-        adminReady.orders = true;
         renderOrdersTable();
         renderDashboard();
     });
     db.collection('settings').doc('config').onSnapshot(function (docSnap) {
         adminState.settings = normalizeSettings(docSnap.exists ? docSnap.data() : DEFAULT_SITE_SETTINGS);
-        adminReady.settings = true;
         renderSettingsForm();
+        renderDashboard();
     });
     db.collection('settings').doc('users').onSnapshot(function (docSnap) {
         adminState.users = normalizeUsersDoc(docSnap.exists ? docSnap.data() : {});
-        adminReady.users = true;
         renderUsersTable();
         renderDashboard();
+    });
+    db.collection('settings').doc('heroSlides').onSnapshot(function (docSnap) {
+        adminState.heroSlides = normalizeHeroSlidesDoc(docSnap.exists ? docSnap.data() : getDefaultHeroSlidesDoc()).slides;
+        renderHeroSlides();
     });
 }
 
@@ -218,7 +199,7 @@ function renderDashboard() {
     document.getElementById('statOrders').textContent = adminState.orders.length;
     document.getElementById('statUsers').textContent = Object.keys(adminState.users).length;
     var revenue = 0;
-    adminState.orders.forEach(function (order) { revenue += Number(order.totalBase) || 0; });
+    for (var i = 0; i < adminState.orders.length; i += 1) revenue += Number(adminState.orders[i].totalBase) || 0;
     document.getElementById('statRevenue').textContent = formatCurrency(revenue, 'palestine', adminState.settings);
     renderChart('ordersStatusChart', 'bar', collectOrderStatusData());
     renderChart('ordersRegionChart', 'doughnut', collectRegionData());
@@ -227,47 +208,29 @@ function renderDashboard() {
 
 function collectOrderStatusData() {
     var labels = ['new', 'preparing', 'prepared', 'in_delivery', 'completed', 'declined', 'returned'];
-    var counts = [];
-    for (var i = 0; i < labels.length; i += 1) {
+    var counts = labels.map(function (status) {
         var count = 0;
-        for (var j = 0; j < adminState.orders.length; j += 1) {
-            if ((adminState.orders[j].status || 'new') === labels[i]) count += 1;
-        }
-        counts.push(count);
-    }
-    return {
-        labels: labels.map(getOrderStatusLabel),
-        datasets: [{ label: 'الطلبات', data: counts, backgroundColor: '#c9a96e' }]
-    };
+        for (var i = 0; i < adminState.orders.length; i += 1) if ((adminState.orders[i].status || 'new') === status) count += 1;
+        return count;
+    });
+    return { labels: labels.map(getOrderStatusLabel), datasets: [{ label: 'الطلبات', data: counts, backgroundColor: ['#c89f5b', '#f2b87c', '#d7f4e7', '#e2dbff', '#8f6128', '#e48ba2', '#b8a4e6'] }] };
 }
 
 function collectRegionData() {
     var labels = ['palestine', 'jordan'];
-    var counts = [];
-    for (var i = 0; i < labels.length; i += 1) {
+    var counts = labels.map(function (region) {
         var count = 0;
-        for (var j = 0; j < adminState.orders.length; j += 1) {
-            if ((adminState.orders[j].region || 'palestine') === labels[i]) count += 1;
-        }
-        counts.push(count);
-    }
-    return {
-        labels: labels.map(getRegionLabel),
-        datasets: [{ data: counts, backgroundColor: ['#c9a96e', '#8b6914'] }]
-    };
+        for (var i = 0; i < adminState.orders.length; i += 1) if ((adminState.orders[i].region || 'palestine') === region) count += 1;
+        return count;
+    });
+    return { labels: labels.map(getRegionLabel), datasets: [{ data: counts, backgroundColor: ['#c89f5b', '#b59bf0'] }] };
 }
 
 function collectBrandData() {
-    var brandMap = {};
-    adminState.products.forEach(function (product) {
-        brandMap[product.brand] = (brandMap[product.brand] || 0) + 1;
-    });
-    var labels = Object.keys(brandMap).slice(0, 8);
-    var values = labels.map(function (key) { return brandMap[key]; });
-    return {
-        labels: labels,
-        datasets: [{ label: 'عدد المنتجات', data: values, backgroundColor: '#a07d3f' }]
-    };
+    var map = {};
+    for (var i = 0; i < adminState.products.length; i += 1) map[adminState.products[i].brand] = (map[adminState.products[i].brand] || 0) + 1;
+    var labels = Object.keys(map);
+    return { labels: labels, datasets: [{ label: 'عدد المنتجات', data: labels.map(function (key) { return map[key]; }), backgroundColor: '#8f6128' }] };
 }
 
 function renderChart(id, type, data) {
@@ -275,19 +238,15 @@ function renderChart(id, type, data) {
     if (adminState.charts[id]) adminState.charts[id].destroy();
     var ctx = document.getElementById(id);
     if (!ctx) return;
-    adminState.charts[id] = new Chart(ctx, {
-        type: type,
-        data: data,
-        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: true } } }
-    });
+    adminState.charts[id] = new Chart(ctx, { type: type, data: data, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: true } } } });
 }
 
 function renderProductsTable() {
     var tbody = document.getElementById('productsTableBody');
     tbody.innerHTML = adminState.products.map(function (product) {
         var firstPrice = product.sizes.length ? product.sizes[0].price : 0;
-        return '<tr><td>' + escapeHtml(product.name) + '</td><td>' + escapeHtml(product.brand) + '</td><td>' + escapeHtml(product.category) + '</td><td>' + escapeHtml(product.sizes.map(function (size) { return size.label; }).join('، ')) + '</td><td>' + formatCurrency(firstPrice, 'palestine', adminState.settings) + '</td><td>' + (product.discount || 0) + '%</td><td>' + getProductStatusLabel(product.status) + '</td><td><button class="action-link" onclick="editProduct(\'' + product.id + '\')">تعديل</button><button class="action-link" onclick="deleteProduct(\'' + product.id + '\')">حذف</button></td></tr>';
-    }).join('') || '<tr><td colspan="8">لا توجد منتجات.</td></tr>';
+        return '<tr><td>' + escapeHtml(product.name) + '</td><td>' + escapeHtml(getTypeLabel(product.type)) + '</td><td>' + escapeHtml(getAgeGroupLabel(product.ageGroup)) + '</td><td>' + escapeHtml(product.brand) + '</td><td>' + formatCurrency(firstPrice, 'palestine', adminState.settings) + '</td><td>' + escapeHtml(getProductStatusLabel(product.status)) + '</td><td><button class="action-link" onclick="editProduct(\'' + product.id + '\')">تعديل</button><button class="action-link" onclick="deleteProduct(\'' + product.id + '\')">حذف</button></td></tr>';
+    }).join('') || '<tr><td colspan="7">لا توجد منتجات حالياً.</td></tr>';
 }
 
 function openProductModal(productId) {
@@ -300,8 +259,10 @@ function openProductModal(productId) {
         document.getElementById('productOriginalId').value = product.id;
         document.getElementById('productId').value = product.id;
         document.getElementById('productName').value = product.name;
+        document.getElementById('productType').value = product.type;
+        document.getElementById('productAgeGroup').value = product.ageGroup || '';
+        document.getElementById('productSubCategory').value = product.subCategory || 'accessories';
         document.getElementById('productBrand').value = product.brand;
-        document.getElementById('productCategory').value = product.category;
         document.getElementById('productStatus').value = product.status;
         document.getElementById('productDiscount').value = product.discount || 0;
         document.getElementById('productImage').value = product.image;
@@ -312,30 +273,26 @@ function openProductModal(productId) {
     productModalEl.classList.remove('hidden');
 }
 
-function closeModal(id) {
-    document.getElementById(id).classList.add('hidden');
-}
-
-function editProduct(productId) {
-    openProductModal(productId);
-}
+function closeModal(id) { document.getElementById(id).classList.add('hidden'); }
+function editProduct(productId) { openProductModal(productId); }
 
 function parseSizesAndPrices(sizesText, pricesText) {
     var sizes = String(sizesText || '').split(',').map(function (item) { return item.trim(); }).filter(Boolean);
     var prices = String(pricesText || '').split(',').map(function (item) { return Number(item) || 0; });
-    if (!sizes.length) sizes = ['قياس موحد'];
-    return sizes.map(function (label, index) {
-        return { label: label, price: prices[index] != null ? prices[index] : (prices[0] || 0) };
-    });
+    if (!sizes.length) sizes = ['واحد'];
+    return sizes.map(function (label, index) { return { size: label, price: prices[index] != null ? prices[index] : (prices[0] || 0) }; });
 }
 
 function saveProduct(event) {
     event.preventDefault();
+    if (adminState.currentRole !== 'admin') return;
     var payload = normalizeProduct({
         id: document.getElementById('productId').value,
         name: document.getElementById('productName').value,
+        type: document.getElementById('productType').value,
+        ageGroup: document.getElementById('productAgeGroup').value,
+        subCategory: document.getElementById('productSubCategory').value,
         brand: document.getElementById('productBrand').value,
-        category: document.getElementById('productCategory').value,
         status: document.getElementById('productStatus').value,
         discount: document.getElementById('productDiscount').value,
         image: document.getElementById('productImage').value,
@@ -345,9 +302,7 @@ function saveProduct(event) {
     db.collection('products').doc(payload.id).set(payload).then(function () {
         closeModal('productModal');
         setAdminStatus('تم حفظ المنتج.', 'success');
-    }).catch(function () {
-        setAdminStatus('تعذر حفظ المنتج.', 'error');
-    });
+    }).catch(function () { setAdminStatus('تعذر حفظ المنتج.', 'error'); });
 }
 
 function deleteProduct(productId) {
@@ -365,6 +320,7 @@ function renderDiscountsTable() {
 
 function saveDiscount(event) {
     event.preventDefault();
+    if (adminState.currentRole !== 'admin') return;
     var payload = normalizeDiscount({
         id: document.getElementById('discountId').value || slugify(document.getElementById('discountTitle').value || 'discount'),
         title: document.getElementById('discountTitle').value,
@@ -381,10 +337,7 @@ function saveDiscount(event) {
 }
 
 function editDiscount(id) {
-    var discount = null;
-    for (var i = 0; i < adminState.discounts.length; i += 1) {
-        if (adminState.discounts[i].id === id) discount = adminState.discounts[i];
-    }
+    var discount = adminState.discounts.filter(function (item) { return item.id === id; })[0];
     if (!discount) return;
     document.getElementById('discountId').value = discount.id;
     document.getElementById('discountTitle').value = discount.title;
@@ -402,6 +355,8 @@ function deleteDiscount(id) {
 }
 
 function renderSettingsForm() {
+    document.getElementById('settingsStoreName').value = adminState.settings.storeNameAr;
+    document.getElementById('settingsHeadline').value = adminState.settings.storeHeadline;
     document.getElementById('settingsWhatsapp').value = adminState.settings.whatsappNumber;
     document.getElementById('settingsInstagram').value = adminState.settings.instagramLink;
     document.getElementById('settingsHeroSubtitle').value = adminState.settings.heroSubtitle;
@@ -416,7 +371,7 @@ function renderSettingsForm() {
 function renderDeliveryRows(region, list) {
     var container = document.getElementById(region === 'palestine' ? 'deliveryRegionsPalestine' : 'deliveryRegionsJordan');
     container.innerHTML = safeArray(list).map(function (item, index) {
-        return '<div class="delivery-row"><input data-region="' + region + '" data-field="name" data-index="' + index + '" value="' + escapeHtml(item.name) + '"><input data-region="' + region + '" data-field="price" data-index="' + index + '" type="number" value="' + item.price + '"><button type="button" class="ghost-btn" onclick="removeDeliveryRow(\'' + region + '\',' + index + ')">×</button></div>';
+        return '<div class="delivery-row"><input data-region="' + region + '" data-field="name" data-index="' + index + '" value="' + escapeHtml(item.name) + '"><input data-region="' + region + '" data-field="price" data-index="' + index + '" type="number" value="' + item.price + '"><button class="ghost-btn" type="button" onclick="removeDeliveryRow(\'' + region + '\',' + index + ')">×</button></div>';
     }).join('');
 }
 
@@ -443,23 +398,107 @@ function collectDeliveryRows(region) {
 
 function saveSettings(event) {
     event.preventDefault();
+    if (adminState.currentRole !== 'admin') return;
     var settings = normalizeSettings({
+        storeNameAr: document.getElementById('settingsStoreName').value,
+        storeHeadline: document.getElementById('settingsHeadline').value,
         whatsappNumber: document.getElementById('settingsWhatsapp').value,
         instagramLink: document.getElementById('settingsInstagram').value,
         heroSubtitle: document.getElementById('settingsHeroSubtitle').value,
         aboutText: document.getElementById('settingsAbout').value,
         conversionRate: document.getElementById('settingsConversionRate').value,
         paymentMethods: [document.getElementById('paymentCod').checked ? 'cod' : '', document.getElementById('paymentVisa').checked ? 'visa' : ''],
-        deliveryRegions: {
-            palestine: collectDeliveryRows('palestine'),
-            jordan: collectDeliveryRows('jordan')
-        }
+        deliveryRegions: { palestine: collectDeliveryRows('palestine'), jordan: collectDeliveryRows('jordan') }
     });
     db.collection('settings').doc('config').set(settings).then(function () {
         setAdminStatus('تم حفظ الإعدادات.', 'success');
-    }).catch(function () {
-        setAdminStatus('تعذر حفظ الإعدادات.', 'error');
+    }).catch(function () { setAdminStatus('تعذر حفظ الإعدادات.', 'error'); });
+}
+
+function renderHeroSlides() {
+    var container = document.getElementById('heroSlidesList');
+    container.innerHTML = adminState.heroSlides.map(function (slide, index) {
+        var preview = slide.type === 'video' ? '<video src="' + escapeHtml(slide.url) + '" muted loop></video>' : '<img src="' + escapeHtml(slide.url) + '" alt="' + escapeHtml(slide.text || 'شريحة') + '">';
+        return '<div class="hero-slide-item" draggable="true" data-hero-id="' + escapeHtml(slide.id) + '"><div class="hero-slide-preview">' + preview + '</div><div class="stack"><strong>الشريحة #' + (index + 1) + '</strong><input type="text" value="' + escapeHtml(slide.text) + '" oninput="updateHeroText(\'' + slide.id + '\', this.value)"><div class="muted">النوع: ' + escapeHtml(slide.type) + '</div></div><div class="hero-slide-tools"><button class="ghost-btn" type="button" onclick="deleteHeroSlide(\'' + slide.id + '\')">حذف</button><span class="pill">اسحبي للترتيب</span></div></div>';
+    }).join('') || '<div class="muted">لا توجد شرائح حتى الآن.</div>';
+    bindHeroDragDrop();
+}
+
+function bindHeroDragDrop() {
+    var items = document.querySelectorAll('.hero-slide-item');
+    for (var i = 0; i < items.length; i += 1) {
+        items[i].addEventListener('dragstart', function (event) {
+            draggedHeroId = event.currentTarget.getAttribute('data-hero-id');
+            event.currentTarget.classList.add('dragging');
+        });
+        items[i].addEventListener('dragend', function (event) { event.currentTarget.classList.remove('dragging'); });
+        items[i].addEventListener('dragover', function (event) { event.preventDefault(); });
+        items[i].addEventListener('drop', function (event) {
+            event.preventDefault();
+            reorderHeroSlides(draggedHeroId, event.currentTarget.getAttribute('data-hero-id'));
+        });
+    }
+}
+
+function reorderHeroSlides(sourceId, targetId) {
+    if (!sourceId || !targetId || sourceId === targetId) return;
+    var slides = adminState.heroSlides.slice();
+    var sourceIndex = -1;
+    var targetIndex = -1;
+    for (var i = 0; i < slides.length; i += 1) {
+        if (slides[i].id === sourceId) sourceIndex = i;
+        if (slides[i].id === targetId) targetIndex = i;
+    }
+    if (sourceIndex < 0 || targetIndex < 0) return;
+    var moved = slides.splice(sourceIndex, 1)[0];
+    slides.splice(targetIndex, 0, moved);
+    adminState.heroSlides = slides.map(function (slide, index) { slide.order = index; return slide; });
+    renderHeroSlides();
+}
+
+function updateHeroText(id, value) {
+    for (var i = 0; i < adminState.heroSlides.length; i += 1) {
+        if (adminState.heroSlides[i].id === id) adminState.heroSlides[i].text = String(value || '');
+    }
+}
+
+function deleteHeroSlide(id) {
+    if (adminState.currentRole !== 'admin') return;
+    adminState.heroSlides = adminState.heroSlides.filter(function (slide) { return slide.id !== id; });
+    if (!adminState.heroSlides.length) adminState.heroSlides = normalizeHeroSlidesDoc(getDefaultHeroSlidesDoc()).slides;
+    renderHeroSlides();
+}
+
+function uploadHeroFiles(event) {
+    if (adminState.currentRole !== 'admin') return;
+    var files = event.target.files;
+    if (!files || !files.length) return;
+    var tasks = [];
+    for (var i = 0; i < files.length; i += 1) tasks.push(readFileAsDataUrl(files[i]));
+    Promise.all(tasks).then(function (items) {
+        for (var j = 0; j < items.length; j += 1) {
+            adminState.heroSlides.push({ id: 'slide-' + Date.now() + '-' + j, type: items[j].type, url: items[j].data, text: '', order: adminState.heroSlides.length + j });
+        }
+        renderHeroSlides();
+        document.getElementById('heroSlidesUploader').value = '';
+        setAdminStatus('تمت إضافة الشرائح محلياً. اضغطي حفظ الشرائح الحالية لتثبيت التغييرات.', 'success');
     });
+}
+
+function readFileAsDataUrl(file) {
+    return new Promise(function (resolve, reject) {
+        var reader = new FileReader();
+        reader.onload = function (event) { resolve({ data: event.target.result, type: file.type.indexOf('video') === 0 ? 'video' : (file.type.indexOf('gif') >= 0 ? 'gif' : 'image') }); };
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+    });
+}
+
+function persistHeroSlides() {
+    if (adminState.currentRole !== 'admin') return;
+    db.collection('settings').doc('heroSlides').set(normalizeHeroSlidesDoc({ slides: adminState.heroSlides })).then(function () {
+        setAdminStatus('تم حفظ الشرائح.', 'success');
+    }).catch(function () { setAdminStatus('تعذر حفظ الشرائح.', 'error'); });
 }
 
 function renderUsersTable() {
@@ -469,7 +508,7 @@ function renderUsersTable() {
         var user = adminState.users[username];
         rows.push('<tr><td>' + escapeHtml(username) + '</td><td>' + escapeHtml(user.name) + '</td><td>' + (user.role === 'worker' ? 'موظف' : 'مدير') + '</td><td><button class="action-link" onclick="editUser(\'' + username + '\')">تعديل</button><button class="action-link" onclick="resetUserPassword(\'' + username + '\')">إعادة تعيين</button><button class="action-link" onclick="removeUser(\'' + username + '\')">حذف</button></td></tr>');
     });
-    tbody.innerHTML = rows.join('');
+    tbody.innerHTML = rows.join('') || '<tr><td colspan="4">لا يوجد مستخدمون.</td></tr>';
 }
 
 function saveUser(event) {
@@ -506,23 +545,21 @@ function removeUser(username) {
 
 function resetUserPassword(username) {
     if (adminState.currentRole !== 'admin') return;
-    var newPassword = prompt('أدخل كلمة المرور الجديدة للمستخدم ' + username, '5555');
-    if (newPassword == null) return;
-    adminState.users[username].password = String(newPassword || '5555');
-    db.collection('settings').doc('users').set(adminState.users).then(function () {
-        setAdminStatus('تم تحديث كلمة المرور.', 'success');
-    });
+    var password = prompt('كلمة المرور الجديدة للمستخدم ' + username, '5555');
+    if (password == null) return;
+    adminState.users[username].password = String(password || '5555');
+    db.collection('settings').doc('users').set(adminState.users).then(function () { setAdminStatus('تم تحديث كلمة المرور.', 'success'); });
 }
 
 function getFilteredOrders() {
-    var term = String(document.getElementById('orderSearchInput').value || '').trim().toLowerCase();
+    var term = normalizeSearchText(document.getElementById('orderSearchInput').value || '');
     var status = document.getElementById('orderStatusFilter').value;
     var region = document.getElementById('orderRegionFilter').value;
     var from = document.getElementById('orderDateFrom').value;
     var to = document.getElementById('orderDateTo').value;
     return adminState.orders.filter(function (order) {
-        var created = order.createdAtIso || '';
-        var haystack = [order.orderNumber, order.customerName].join(' ').toLowerCase();
+        var haystack = normalizeSearchText([order.orderNumber, order.customerName].join(' '));
+        var created = String(order.createdAtIso || '');
         if (term && haystack.indexOf(term) < 0) return false;
         if (status && (order.status || 'new') !== status) return false;
         if (region && (order.region || 'palestine') !== region) return false;
@@ -536,12 +573,9 @@ function renderOrdersTable() {
     var tbody = document.getElementById('ordersTableBody');
     var orders = getFilteredOrders();
     tbody.innerHTML = orders.map(function (order) {
-        var itemsText = safeArray(order.items).map(function (item) { return item.name + ' x' + item.qty; }).join('، ');
-        var statusSelect = '<select class="status-select" onchange="updateOrderStatus(\'' + order._docId + '\', this.value)">'
-            + ['new', 'preparing', 'prepared', 'in_delivery', 'completed', 'declined', 'returned'].map(function (status) {
-                return '<option value="' + status + '" ' + ((order.status || 'new') === status ? 'selected' : '') + '>' + getOrderStatusLabel(status) + '</option>';
-            }).join('') + '</select>';
-        return '<tr><td>' + escapeHtml(order.orderNumber || '') + '</td><td>' + escapeHtml(formatDateTime(order.createdAt || order.createdAtIso)) + '</td><td>' + escapeHtml(order.customerName || '') + '</td><td>' + escapeHtml(order.phone || '') + '</td><td>' + escapeHtml(order.regionLabel || getRegionLabel(order.region || 'palestine')) + '</td><td>' + formatCurrency(order.totalBase || 0, order.region || 'palestine', adminState.settings) + '</td><td>' + escapeHtml(order.paymentLabel || getPaymentMethodLabel(order.paymentMethod || 'cod')) + '</td><td>' + statusSelect + '</td><td>' + escapeHtml(itemsText) + '</td></tr>';
+        var itemsText = safeArray(order.items).map(function (item) { return item.name + ' × ' + item.qty; }).join('، ');
+        var select = '<select onchange="updateOrderStatus(\'' + order._docId + '\', this.value)">' + ['new', 'preparing', 'prepared', 'in_delivery', 'completed', 'declined', 'returned'].map(function (status) { return '<option value="' + status + '" ' + ((order.status || 'new') === status ? 'selected' : '') + '>' + getOrderStatusLabel(status) + '</option>'; }).join('') + '</select>';
+        return '<tr><td>' + escapeHtml(order.orderNumber || '') + '</td><td>' + escapeHtml(formatDateTime(order.createdAt || order.createdAtIso)) + '</td><td>' + escapeHtml(order.customerName || '') + '</td><td>' + escapeHtml(order.phone || '') + '</td><td>' + escapeHtml(order.regionLabel || getRegionLabel(order.region || 'palestine')) + '</td><td>' + formatCurrency(order.totalBase || 0, order.region || 'palestine', adminState.settings) + '</td><td>' + escapeHtml(order.paymentLabel || getPaymentMethodLabel(order.paymentMethod || 'cod')) + '</td><td>' + select + '</td><td>' + escapeHtml(itemsText) + '</td></tr>';
     }).join('') || '<tr><td colspan="9">لا توجد طلبات مطابقة.</td></tr>';
 }
 
@@ -552,11 +586,14 @@ function updateOrderStatus(docId, status) {
 function exportProductsCsv() {
     var rows = adminState.products.map(function (product) {
         return {
+            id: product.id,
             name: product.name,
+            type: product.type,
+            ageGroup: product.ageGroup,
+            subCategory: product.subCategory,
             brand: product.brand,
-            category: product.category,
-            sizes: product.sizes.map(function (size) { return size.label; }).join('; '),
-            prices: product.sizes.map(function (size) { return size.price; }).join('; '),
+            sizes: product.sizes.map(function (size) { return size.label; }).join(';'),
+            prices: product.sizes.map(function (size) { return size.price; }).join(';'),
             discount: product.discount,
             status: product.status,
             image: product.image,
@@ -575,14 +612,13 @@ function exportOrders() {
             phone: order.phone,
             items: safeArray(order.items).map(function (item) { return item.name + ' x' + item.qty; }).join('; '),
             total: order.totalFormatted || formatCurrency(order.totalBase || 0, order.region || 'palestine', adminState.settings),
-            deliveryMethod: order.deliveryName,
+            deliveryName: order.deliveryName,
             region: order.regionLabel,
             status: getOrderStatusLabel(order.status || 'new'),
-            paymentMethod: order.paymentLabel
+            payment: order.paymentLabel
         };
     });
-    var format = document.getElementById('ordersExportFormat').value;
-    if (format === 'xlsx' && typeof XLSX !== 'undefined') {
+    if (document.getElementById('ordersExportFormat').value === 'xlsx' && typeof XLSX !== 'undefined') {
         var sheet = XLSX.utils.json_to_sheet(rows);
         var workbook = XLSX.utils.book_new();
         XLSX.utils.book_append_sheet(workbook, sheet, 'Orders');
@@ -607,7 +643,7 @@ function fallbackUnparse(rows) {
     var keys = Object.keys(rows[0]);
     var lines = [keys.join(',')];
     rows.forEach(function (row) {
-        lines.push(keys.map(function (key) { return '\"' + String(row[key] == null ? '' : row[key]).replace(/\"/g, '\"\"') + '\"'; }).join(','));
+        lines.push(keys.map(function (key) { return '"' + String(row[key] == null ? '' : row[key]).replace(/"/g, '""') + '"'; }).join(','));
     });
     return lines.join('\n');
 }
@@ -615,7 +651,6 @@ function fallbackUnparse(rows) {
 function importProductsFile() {
     if (adminState.currentRole !== 'admin') return;
     var input = document.getElementById('importProductsFile');
-    var mode = document.getElementById('importMode').value;
     if (!input.files || !input.files[0]) {
         setAdminStatus('اختاري ملفاً أولاً.', 'error');
         return;
@@ -623,10 +658,10 @@ function importProductsFile() {
     parseFileRows(input.files[0], function (rows) {
         var list = convertRowsToProducts(rows);
         if (!list.length) {
-            setAdminStatus('لم يتم العثور على منتجات صالحة في الملف.', 'error');
+            setAdminStatus('لم يتم العثور على منتجات صالحة.', 'error');
             return;
         }
-        importProducts(list, mode);
+        importProducts(list, document.getElementById('importMode').value);
     });
 }
 
@@ -646,29 +681,23 @@ function parseFileRows(file, callback) {
 }
 
 function convertRowsToProducts(rows) {
-    var map = {};
-    rows.forEach(function (row) {
-        var keys = {};
-        Object.keys(row).forEach(function (key) { keys[key.toLowerCase()] = row[key]; });
-        var name = keys.name || keys['اسم المنتج'] || keys.product || '';
-        if (!name) return;
-        var brand = keys.brand || keys['البراند'] || '';
-        var category = keys.category || keys['الفئة'] || 'ملابس';
-        var id = keys.id || slugify(name + '-' + brand + '-' + category);
-        if (!map[id]) {
-            map[id] = { id: id, name: name, brand: brand, category: category, image: keys.image || keys['image url'] || '', discount: Number(keys.discount || 0) || 0, status: keys.status || 'active', description: keys.description || '', sizes: [] };
-        }
-        var sizeField = keys.size || keys.sizes || keys['المقاس'] || keys['المقاسات'] || 'قياس موحد';
-        var priceField = keys.price || keys.prices || keys['السعر'] || '0';
-        var sizes = String(sizeField).split(';');
-        var prices = String(priceField).split(';');
-        for (var i = 0; i < sizes.length; i += 1) {
-            var label = String(sizes[i] || '').trim();
-            if (!label) continue;
-            map[id].sizes.push({ label: label, price: Number(prices[i] != null ? prices[i] : prices[0]) || 0 });
-        }
-    });
-    return Object.keys(map).map(function (key) { return normalizeProduct(map[key]); });
+    return rows.map(function (row) {
+        var data = {};
+        Object.keys(row).forEach(function (key) { data[key.toLowerCase()] = row[key]; });
+        return normalizeProduct({
+            id: data.id,
+            name: data.name || data['اسم المنتج'],
+            type: data.type || data['النوع'] || data.category || data['الفئة'],
+            ageGroup: data.agegroup || data['الفئة العمرية'],
+            subCategory: data.subcategory || data['الفئة الفرعية'],
+            brand: data.brand || data['البراند'],
+            sizes: parseSizesAndPrices(data.sizes || data['المقاسات'], data.prices || data['الأسعار']),
+            discount: data.discount,
+            status: data.status,
+            image: data.image,
+            description: data.description || data['الوصف']
+        });
+    }).filter(function (product) { return product.name; });
 }
 
 function importProducts(list, mode) {
@@ -679,9 +708,7 @@ function importProducts(list, mode) {
         list.forEach(function (product) { batch.set(db.collection('products').doc(product.id), product); });
         return batch.commit();
     }).then(function () {
-        setAdminStatus('تم استيراد المنتجات بنجاح.', 'success');
+        setAdminStatus('تم استيراد المنتجات.', 'success');
         document.getElementById('importProductsFile').value = '';
-    }).catch(function () {
-        setAdminStatus('تعذر استيراد المنتجات.', 'error');
-    });
+    }).catch(function () { setAdminStatus('تعذر استيراد المنتجات.', 'error'); });
 }
