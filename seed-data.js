@@ -67,12 +67,12 @@ var SEED_PRODUCTS = [
             { name: 'أبيض عاجي', hex: '#FFF8ED', images: [seedImage('photo-1515886657613-9f3515b0c78f', 10)] }
         ],
         variants: [
-            { size: '1-2', color: 'وردي بودري', stock: 9, price: 125 },
-            { size: '2-3', color: 'وردي بودري', stock: 7, price: 125 },
-            { size: '3-4', color: 'وردي بودري', stock: 3, price: 130 },
-            { size: '1-2', color: 'أبيض عاجي', stock: 0, price: 122 },
-            { size: '2-3', color: 'أبيض عاجي', stock: 4, price: 122 },
-            { size: '3-4', color: 'أبيض عاجي', stock: 2, price: 128 }
+            { size: '1-2 سنة', color: 'وردي بودري', stock: 9, price: 125 },
+            { size: '2-3 سنة', color: 'وردي بودري', stock: 7, price: 125 },
+            { size: '3-4 سنة', color: 'وردي بودري', stock: 3, price: 130 },
+            { size: '1-2 سنة', color: 'أبيض عاجي', stock: 0, price: 122 },
+            { size: '2-3 سنة', color: 'أبيض عاجي', stock: 4, price: 122 },
+            { size: '3-4 سنة', color: 'أبيض عاجي', stock: 2, price: 128 }
         ]
     },
     {
@@ -89,24 +89,24 @@ var SEED_PRODUCTS = [
             { name: 'أصفر هادئ', hex: '#F1D97A', images: [seedImage('photo-1521572163474-6864f9cf17ab', 13)] }
         ],
         variants: [
-            { size: '4-5', color: 'أخضر مريمي', stock: 26, price: 72 },
-            { size: '5-6', color: 'أخضر مريمي', stock: 20, price: 72 },
-            { size: '6-7', color: 'أخضر مريمي', stock: 18, price: 75 },
-            { size: '7-8', color: 'أخضر مريمي', stock: 12, price: 75 },
-            { size: '8-9', color: 'أخضر مريمي', stock: 6, price: 78 },
-            { size: '9-10', color: 'أخضر مريمي', stock: 0, price: 78 },
-            { size: '4-5', color: 'كحلي', stock: 14, price: 72 },
-            { size: '5-6', color: 'كحلي', stock: 11, price: 72 },
-            { size: '6-7', color: 'كحلي', stock: 5, price: 76 },
-            { size: '7-8', color: 'كحلي', stock: 3, price: 76 },
-            { size: '8-9', color: 'كحلي', stock: 2, price: 80 },
-            { size: '9-10', color: 'كحلي', stock: 0, price: 80 },
-            { size: '4-5', color: 'أصفر هادئ', stock: 0, price: 74 },
-            { size: '5-6', color: 'أصفر هادئ', stock: 0, price: 74 },
-            { size: '6-7', color: 'أصفر هادئ', stock: 0, price: 77 },
-            { size: '7-8', color: 'أصفر هادئ', stock: 0, price: 77 },
-            { size: '8-9', color: 'أصفر هادئ', stock: 0, price: 81 },
-            { size: '9-10', color: 'أصفر هادئ', stock: 0, price: 81 }
+            { size: '4-5 سنة', color: 'أخضر مريمي', stock: 26, price: 72 },
+            { size: '5-6 سنة', color: 'أخضر مريمي', stock: 20, price: 72 },
+            { size: '6-7 سنة', color: 'أخضر مريمي', stock: 18, price: 75 },
+            { size: '7-8 سنة', color: 'أخضر مريمي', stock: 12, price: 75 },
+            { size: '8-9 سنة', color: 'أخضر مريمي', stock: 6, price: 78 },
+            { size: '9-10 سنة', color: 'أخضر مريمي', stock: 0, price: 78 },
+            { size: '4-5 سنة', color: 'كحلي', stock: 14, price: 72 },
+            { size: '5-6 سنة', color: 'كحلي', stock: 11, price: 72 },
+            { size: '6-7 سنة', color: 'كحلي', stock: 5, price: 76 },
+            { size: '7-8 سنة', color: 'كحلي', stock: 3, price: 76 },
+            { size: '8-9 سنة', color: 'كحلي', stock: 2, price: 80 },
+            { size: '9-10 سنة', color: 'كحلي', stock: 0, price: 80 },
+            { size: '4-5 سنة', color: 'أصفر هادئ', stock: 0, price: 74 },
+            { size: '5-6 سنة', color: 'أصفر هادئ', stock: 0, price: 74 },
+            { size: '6-7 سنة', color: 'أصفر هادئ', stock: 0, price: 77 },
+            { size: '7-8 سنة', color: 'أصفر هادئ', stock: 0, price: 77 },
+            { size: '8-9 سنة', color: 'أصفر هادئ', stock: 0, price: 81 },
+            { size: '9-10 سنة', color: 'أصفر هادئ', stock: 0, price: 81 }
         ]
     },
     {
@@ -147,18 +147,18 @@ var SEED_PRODUCTS = [
             { name: 'أسود', hex: '#222222', images: [seedImage('photo-1483985988355-763728e1935b', 18)] }
         ],
         variants: [
-            { size: '4-5', color: 'بيج قمحي', stock: 22, price: 84 },
-            { size: '5-6', color: 'بيج قمحي', stock: 17, price: 84 },
-            { size: '6-7', color: 'بيج قمحي', stock: 10, price: 87 },
-            { size: '7-8', color: 'بيج قمحي', stock: 6, price: 87 },
-            { size: '8-9', color: 'بيج قمحي', stock: 4, price: 90 },
-            { size: '9-10', color: 'بيج قمحي', stock: 3, price: 90 },
-            { size: '4-5', color: 'أسود', stock: 12, price: 86 },
-            { size: '5-6', color: 'أسود', stock: 10, price: 86 },
-            { size: '6-7', color: 'أسود', stock: 8, price: 89 },
-            { size: '7-8', color: 'أسود', stock: 0, price: 89 },
-            { size: '8-9', color: 'أسود', stock: 0, price: 92 },
-            { size: '9-10', color: 'أسود', stock: 0, price: 92 }
+            { size: '4-5 سنة', color: 'بيج قمحي', stock: 22, price: 84 },
+            { size: '5-6 سنة', color: 'بيج قمحي', stock: 17, price: 84 },
+            { size: '6-7 سنة', color: 'بيج قمحي', stock: 10, price: 87 },
+            { size: '7-8 سنة', color: 'بيج قمحي', stock: 6, price: 87 },
+            { size: '8-9 سنة', color: 'بيج قمحي', stock: 4, price: 90 },
+            { size: '9-10 سنة', color: 'بيج قمحي', stock: 3, price: 90 },
+            { size: '4-5 سنة', color: 'أسود', stock: 12, price: 86 },
+            { size: '5-6 سنة', color: 'أسود', stock: 10, price: 86 },
+            { size: '6-7 سنة', color: 'أسود', stock: 8, price: 89 },
+            { size: '7-8 سنة', color: 'أسود', stock: 0, price: 89 },
+            { size: '8-9 سنة', color: 'أسود', stock: 0, price: 92 },
+            { size: '9-10 سنة', color: 'أسود', stock: 0, price: 92 }
         ]
     },
     {

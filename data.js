@@ -27,8 +27,8 @@ var ACCESSORY_SUBCATEGORY_OPTIONS = {
 
 var AGE_GROUP_OPTIONS = {
     baby: { key: 'baby', label: 'حديثي الولادة (0-12 شهر)', sizes: ['0-3 شهور', '3-6 شهور', '6-9 شهور', '9-12 شهور'] },
-    toddler: { key: 'toddler', label: 'طفل صغير (1-4 سنة)', sizes: ['1-2', '2-3', '3-4'] },
-    kids: { key: 'kids', label: 'أطفال (5-10 سنة)', sizes: ['4-5', '5-6', '6-7', '7-8', '8-9', '9-10'] },
+    toddler: { key: 'toddler', label: 'طفل صغير (1-4 سنة)', sizes: ['1-2 سنة', '2-3 سنة', '3-4 سنة'] },
+    kids: { key: 'kids', label: 'أطفال (5-10 سنة)', sizes: ['4-5 سنة', '5-6 سنة', '6-7 سنة', '7-8 سنة', '8-9 سنة', '9-10 سنة'] },
     teens: { key: 'teens', label: 'مراهقين (11-15 سنة)', sizes: ['S', 'M', 'L', 'XL', 'XXL'] }
 };
 
