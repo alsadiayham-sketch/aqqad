@@ -210,13 +210,16 @@ table { width: 100%; border-collapse: collapse; min-width: 760px; }
 th, td { padding: 12px 10px; border-bottom: 1px solid var(--line); text-align: right; vertical-align: top; }
 th { color: var(--muted); font-size: 0.9rem; }
 .action-link {
-    border: none;
-    background: none;
+    border: 1px solid rgba(143,97,40,0.25);
+    background: rgba(143,97,40,0.06);
     color: var(--gold-deep);
     font-weight: 800;
-    padding: 0;
-    margin-left: 10px;
+    padding: 5px 12px;
+    margin-left: 6px;
+    border-radius: 8px;
+    cursor: pointer;
 }
+.action-link:hover { background: rgba(143,97,40,0.14); }
 .delivery-row {
     display: grid;
     grid-template-columns: minmax(0, 1fr) 150px 48px;
