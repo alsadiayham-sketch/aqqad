@@ -1,0 +1,6 @@
+name = "aqqad-api"
+main = "index.js"
+compatibility_date = "2024-01-01"
+
+[vars]
+FIRESTORE_BASE = "https://firestore.googleapis.com/v1/projects/dimaboutique-b4f16/databases/(default)/documents/projects/aqqad"

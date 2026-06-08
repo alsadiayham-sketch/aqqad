@@ -1,3 +1,10 @@
+var EDGE_CACHE_URL = 'https://aqqad-api.alsadiayham.workers.dev';
+var CACHE_KEY_PRODUCTS = 'aqqad_cache_products';
+var CACHE_KEY_SETTINGS = 'aqqad_cache_settings';
+var CACHE_KEY_DISCOUNTS = 'aqqad_cache_discounts';
+var CACHE_KEY_HERO = 'aqqad_cache_hero';
+var CORE_CACHE_TTL = 30 * 60 * 1000;
+
 (function (global) {
     var state = {
         options: {},
@@ -15,9 +22,20 @@
         ready: { products: false, discounts: false, settings: false, heroSlides: false },
         listeners: [],
         subscriptionsStarted: false,
-        swipeStartX: 0
+        swipeStartX: 0,
+        productSource: 'default'
     };
     var toastTimer = null;
+
+    function debounce(fn, delay) {
+        var timer = null;
+        return function () {
+            var args = arguments;
+            var ctx = this;
+            clearTimeout(timer);
+            timer = setTimeout(function () { fn.apply(ctx, args); }, delay);
+        };
+    }
 
     function readCartStorage() {
         try {
@@ -29,6 +47,93 @@
 
     function saveCartStorage() {
         localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(state.cart));
+    }
+
+    function readCoreCache(key) {
+        try {
+            var raw = localStorage.getItem(key);
+            if (!raw) return null;
+            var payload = JSON.parse(raw);
+            var timestamp = Number(payload && payload.timestamp);
+            if (!timestamp || new Date().getTime() - timestamp > CORE_CACHE_TTL) {
+                localStorage.removeItem(key);
+                return null;
+            }
+            return payload.data;
+        } catch (error) {
+            return null;
+        }
+    }
+
+    function writeCoreCache(key, value) {
+        try {
+            localStorage.setItem(key, JSON.stringify({
+                timestamp: new Date().getTime(),
+                data: cloneObject(value)
+            }));
+        } catch (error) {
+        }
+    }
+
+    function applyCoreCache() {
+        var cachedProducts = readCoreCache(CACHE_KEY_PRODUCTS);
+        if (cachedProducts) {
+            state.products = normalizeProducts(cachedProducts);
+            state.productSource = 'cache';
+            state.cart = normalizeCartItems(state.cart, state.products);
+            saveCartStorage();
+            setReady('products');
+        }
+        var cachedDiscounts = readCoreCache(CACHE_KEY_DISCOUNTS);
+        if (cachedDiscounts) {
+            state.discounts = normalizeDiscounts(cachedDiscounts);
+            setReady('discounts');
+        }
+        var cachedSettings = readCoreCache(CACHE_KEY_SETTINGS);
+        if (cachedSettings) {
+            state.settings = normalizeSettings(cachedSettings);
+            setReady('settings');
+        }
+        var cachedHeroSlides = readCoreCache(CACHE_KEY_HERO);
+        if (cachedHeroSlides) {
+            state.heroSlides = normalizeHeroSlidesDoc({ slides: cachedHeroSlides }).slides;
+            setReady('heroSlides');
+        }
+    }
+
+    function markAllReadyFallback() {
+        if (!state.ready.products) state.ready.products = true;
+        if (!state.ready.discounts) state.ready.discounts = true;
+        if (!state.ready.settings) state.ready.settings = true;
+        if (!state.ready.heroSlides) state.ready.heroSlides = true;
+        renderShared();
+        fireReady();
+    }
+
+    function fetchFromEdgeCache(path, onSuccess, onError) {
+        var baseUrl = String(EDGE_CACHE_URL || '').replace(/\/+$/, '');
+        if (!baseUrl) {
+            if (onError) onError('disabled');
+            return;
+        }
+        var request = new XMLHttpRequest();
+        request.open('GET', baseUrl + path, true);
+        request.onreadystatechange = function () {
+            if (request.readyState !== 4) return;
+            if (request.status >= 200 && request.status < 300) {
+                try {
+                    if (onSuccess) onSuccess(JSON.parse(request.responseText || 'null'));
+                } catch (error) {
+                    if (onError) onError(error);
+                }
+                return;
+            }
+            if (onError) onError(request.status);
+        };
+        request.onerror = function () {
+            if (onError) onError('network');
+        };
+        request.send(null);
     }
 
     function syncCart() {
@@ -76,13 +181,19 @@
     function subscribeCore() {
         if (state.subscriptionsStarted) return;
         state.subscriptionsStarted = true;
+        applyCoreCache();
+        fetchFromEdgeCache('/api/products', function (payload) {
+            if (state.productSource === 'snapshot') return;
+            state.products = normalizeProducts(payload);
+            state.productSource = 'edge';
+            state.cart = normalizeCartItems(state.cart, state.products);
+            saveCartStorage();
+            writeCoreCache(CACHE_KEY_PRODUCTS, state.products);
+            setReady('products');
+        }, function () {
+        });
         if (!global.db) {
-            state.ready.products = true;
-            state.ready.discounts = true;
-            state.ready.settings = true;
-            state.ready.heroSlides = true;
-            renderShared();
-            fireReady();
+            markAllReadyFallback();
             return;
         }
         db.collection('products').onSnapshot(function (snapshot) {
@@ -91,8 +202,10 @@
                 data.id = docSnap.id;
                 return normalizeProduct(data);
             });
+            state.productSource = 'snapshot';
             state.cart = normalizeCartItems(state.cart, state.products);
             saveCartStorage();
+            writeCoreCache(CACHE_KEY_PRODUCTS, state.products);
             setReady('products');
         }, function () {
             setReady('products');
@@ -103,18 +216,21 @@
                 data.id = docSnap.id;
                 return normalizeDiscount(data);
             });
+            writeCoreCache(CACHE_KEY_DISCOUNTS, state.discounts);
             setReady('discounts');
         }, function () {
             setReady('discounts');
         });
         db.collection('settings').doc('config').onSnapshot(function (docSnap) {
             state.settings = normalizeSettings(docSnap.exists ? docSnap.data() : DEFAULT_SITE_SETTINGS);
+            writeCoreCache(CACHE_KEY_SETTINGS, state.settings);
             setReady('settings');
         }, function () {
             setReady('settings');
         });
         db.collection('settings').doc('heroSlides').onSnapshot(function (docSnap) {
             state.heroSlides = normalizeHeroSlidesDoc(docSnap.exists ? docSnap.data() : getDefaultHeroSlidesDoc()).slides;
+            writeCoreCache(CACHE_KEY_HERO, state.heroSlides);
             setReady('heroSlides');
         }, function () {
             state.heroSlides = normalizeHeroSlidesDoc(getDefaultHeroSlidesDoc()).slides;
@@ -512,7 +628,7 @@
         }).join('');
         var totalStock = getTotalStock(product);
         var soldout = product.status === 'soldout';
-        return '<article class="product-card visible' + (soldout ? ' soldout-card' : '') + '"><div class="product-thumb">' + (soldout ? '<div class="soldout-overlay">نفدت الكمية</div>' : '') + '<div class="product-statuses"><span class="badge badge-' + escapeHtml(product.status) + '">' + escapeHtml(getProductStatusLabel(product.status)) + '</span>' + (pricing.hasDiscount ? '<span class="badge badge-special">خصم ' + pricing.discountPercent + '%</span>' : '') + '</div><img src="' + escapeHtml(getProductImageForColor(product, defaultVariant ? defaultVariant.color : '')) + '" alt="' + escapeHtml(product.name) + '"></div><div class="product-brand">' + escapeHtml(product.brand) + '</div><h3>' + escapeHtml(product.name) + '</h3><p class="product-description">' + escapeHtml(product.description || '') + '</p><div class="product-meta-row"><div class="color-swatches">' + swatches + '</div>' + (product.ageGroup ? '<span class="size-pill">' + escapeHtml(getAgeGroupLabel(product.ageGroup)) + '</span>' : '') + '</div><div class="stock-indicator' + (totalStock > 0 && totalStock < 10 ? ' stock-low' : '') + '">' + (soldout ? 'غير متوفر حالياً' : 'إجمالي المخزون: ' + totalStock + ' قطعة') + '</div><div class="price-row"><div><div class="price-now">' + pricing.finalFormatted + '</div>' + (pricing.hasDiscount ? '<div class="price-old">' + pricing.originalFormatted + '</div>' : '') + '</div></div><div class="product-actions"><button class="btn btn-secondary" type="button" data-open-product="' + escapeHtml(product.id) + '">التفاصيل</button>' + (soldout ? '' : '<button class="btn btn-primary" type="button" data-quick-add="' + escapeHtml(product.id) + '" data-quick-size="' + escapeHtml(defaultVariant ? defaultVariant.size : '') + '" data-quick-color="' + escapeHtml(defaultVariant ? defaultVariant.color : '') + '">أضف للسلة</button>') + '</div></article>';
+        return '<article class="product-card visible' + (soldout ? ' soldout-card' : '') + '"><div class="product-thumb">' + (soldout ? '<div class="soldout-overlay">نفدت الكمية</div>' : '') + '<div class="product-statuses"><span class="badge badge-' + escapeHtml(product.status) + '">' + escapeHtml(getProductStatusLabel(product.status)) + '</span>' + (pricing.hasDiscount ? '<span class="badge badge-special">خصم ' + pricing.discountPercent + '%</span>' : '') + '</div><img loading="lazy" src="' + escapeHtml(getProductImageForColor(product, defaultVariant ? defaultVariant.color : '')) + '" alt="' + escapeHtml(product.name) + '"></div><div class="product-brand">' + escapeHtml(product.brand) + '</div><h3>' + escapeHtml(product.name) + '</h3><p class="product-description">' + escapeHtml(product.description || '') + '</p><div class="product-meta-row"><div class="color-swatches">' + swatches + '</div>' + (product.ageGroup ? '<span class="size-pill">' + escapeHtml(getAgeGroupLabel(product.ageGroup)) + '</span>' : '') + '</div><div class="stock-indicator' + (totalStock > 0 && totalStock < 10 ? ' stock-low' : '') + '">' + (soldout ? 'غير متوفر حالياً' : 'إجمالي المخزون: ' + totalStock + ' قطعة') + '</div><div class="price-row"><div><div class="price-now">' + pricing.finalFormatted + '</div>' + (pricing.hasDiscount ? '<div class="price-old">' + pricing.originalFormatted + '</div>' : '') + '</div></div><div class="product-actions"><button class="btn btn-secondary" type="button" data-open-product="' + escapeHtml(product.id) + '">التفاصيل</button>' + (soldout ? '' : '<button class="btn btn-primary" type="button" data-quick-add="' + escapeHtml(product.id) + '" data-quick-size="' + escapeHtml(defaultVariant ? defaultVariant.size : '') + '" data-quick-color="' + escapeHtml(defaultVariant ? defaultVariant.color : '') + '">أضف للسلة</button>') + '</div></article>';
     }
 
     function filterProducts(list, predicate) {
@@ -658,6 +774,8 @@
         return lines.join('\n');
     }
 
+    global.debounce = debounce;
+
     global.AqqadStore = {
         init: init,
         onReady: onReady,
@@ -678,6 +796,8 @@
         closeCart: closeCart,
         openCart: openCart,
         renderShared: renderShared,
+        debounce: debounce,
+        fetchFromEdgeCache: fetchFromEdgeCache,
         getCartDetailed: getCartDetailed,
         getCartTotals: getCartTotals,
         removeCartLine: removeCartLine,

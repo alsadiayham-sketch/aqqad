@@ -6,6 +6,10 @@
     <title>الإكسسوارات والعناية | عقاد كيدز</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="preconnect" href="https://firestore.googleapis.com" crossorigin>
+    <link rel="preconnect" href="https://images.unsplash.com" crossorigin>
+    <link rel="dns-prefetch" href="https://firestore.googleapis.com">
+    <link rel="dns-prefetch" href="https://images.unsplash.com">
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800;900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="shared.css">
 </head>
@@ -60,7 +64,7 @@
             document.getElementById('subCategoryFilter').addEventListener('change', function (event) { accFilters.subCategory = event.target.value; renderAccCatalog(); });
             document.getElementById('accColorFilter').addEventListener('change', function (event) { accFilters.color = event.target.value; renderAccCatalog(); });
             document.getElementById('accBrandFilter').addEventListener('change', function (event) { accFilters.brand = event.target.value; renderAccCatalog(); });
-            document.getElementById('accSearchFilter').addEventListener('input', function (event) { accFilters.search = normalizeSearchText(event.target.value); renderAccCatalog(); });
+            document.getElementById('accSearchFilter').addEventListener('input', debounce(function () { accFilters.search = normalizeSearchText(this.value); renderAccCatalog(); }, 250));
         }
         function renderAccFilters() {
             var products = AqqadStore.getProductsByType('accessories-page');

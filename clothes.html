@@ -6,6 +6,10 @@
     <title>ملابس الأطفال | عقاد كيدز</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="preconnect" href="https://firestore.googleapis.com" crossorigin>
+    <link rel="preconnect" href="https://images.unsplash.com" crossorigin>
+    <link rel="dns-prefetch" href="https://firestore.googleapis.com">
+    <link rel="dns-prefetch" href="https://images.unsplash.com">
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800;900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="shared.css">
 </head>
@@ -62,7 +66,7 @@
             document.getElementById('sizeFilter').addEventListener('change', function (event) { clothesFilters.size = event.target.value; renderClothesCatalog(); });
             document.getElementById('colorFilter').addEventListener('change', function (event) { clothesFilters.color = event.target.value; renderClothesCatalog(); });
             document.getElementById('brandFilter').addEventListener('change', function (event) { clothesFilters.brand = event.target.value; renderClothesCatalog(); });
-            document.getElementById('searchFilter').addEventListener('input', function (event) { clothesFilters.search = normalizeSearchText(event.target.value); renderClothesCatalog(); });
+            document.getElementById('searchFilter').addEventListener('input', debounce(function () { clothesFilters.search = normalizeSearchText(this.value); renderClothesCatalog(); }, 250));
         }
         function renderClothesFilters() {
             var products = AqqadStore.getProductsByType('clothes');

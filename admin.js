@@ -14,6 +14,16 @@ var adminState = {
 var productModalEl = null;
 var draggedHeroId = '';
 
+function debounce(fn, delay) {
+    var timer = null;
+    return function () {
+        var args = arguments;
+        var ctx = this;
+        clearTimeout(timer);
+        timer = setTimeout(function () { fn.apply(ctx, args); }, delay);
+    };
+}
+
 document.addEventListener('DOMContentLoaded', function () {
     bindAdminEvents();
     restoreSession();
@@ -41,7 +51,7 @@ function bindAdminEvents() {
     document.getElementById('exportProductsBtn').addEventListener('click', exportProductsCsv);
     document.getElementById('importProductsBtn').addEventListener('click', importProductsFile);
     document.getElementById('exportOrdersBtn').addEventListener('click', exportOrders);
-    document.getElementById('orderSearchInput').addEventListener('input', renderOrdersTable);
+    document.getElementById('orderSearchInput').addEventListener('input', debounce(renderOrdersTable, 250));
     document.getElementById('orderStatusFilter').addEventListener('change', renderOrdersTable);
     document.getElementById('orderRegionFilter').addEventListener('change', renderOrdersTable);
     document.getElementById('orderDateFrom').addEventListener('change', renderOrdersTable);

@@ -11,6 +11,9 @@
     };
     if (!firebase.apps.length) { firebase.initializeApp(firebaseConfig); }
     var rawDb = firebase.firestore();
+    rawDb.enablePersistence({ synchronizeTabs: true }).catch(function (err) {
+        console.warn('Persistence failed:', err.code);
+    });
     var PROJECT_ID = 'aqqad';
     var projectRef = rawDb.collection('projects').doc(PROJECT_ID);
     var db = {
