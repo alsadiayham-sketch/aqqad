@@ -53,9 +53,13 @@
             if (!checkoutState.deliveryId && deliveryList.length) checkoutState.deliveryId = deliveryList[0].id;
             if (AqqadStore.state.settings.paymentMethods.indexOf(checkoutState.paymentMethod) < 0) checkoutState.paymentMethod = AqqadStore.state.settings.paymentMethods[0] || 'cod';
             var subtotalBase = 0;
+            var invalidMessages = [];
             var itemsHtml = rows.map(function (row) {
-                subtotalBase += row.totalBase;
-                return '<div class="checkout-item"><img src="' + escapeHtml(row.product.image) + '" alt="' + escapeHtml(row.product.name) + '"><div><strong>' + escapeHtml(row.product.name) + '</strong><div style="color:var(--muted)">' + escapeHtml(row.size.label) + ' • الكمية ' + row.item.qty + '</div></div><strong>' + formatCurrency(row.totalBase, AqqadStore.state.region, AqqadStore.state.settings) + '</strong></div>';
+                if (row.variant && row.availableQty >= row.item.qty) subtotalBase += row.totalBase;
+                if (!row.variant || row.availableQty < row.item.qty) {
+                    invalidMessages.push('عذراً، المنتج ' + row.product.name + ' مقاس ' + row.item.size + ' لون ' + row.item.color + ' لم يعد متوفراً. يرجى تحديث السلة.');
+                }
+                return '<div class="checkout-item' + (!row.variant || row.availableQty < row.item.qty ? ' cart-item-invalid' : '') + '"><img src="' + escapeHtml(row.lineImage || row.product.image) + '" alt="' + escapeHtml(row.product.name) + '"><div><strong>' + escapeHtml(row.product.name) + '</strong><div style="color:var(--muted)">' + escapeHtml(row.item.size) + ' • ' + escapeHtml(row.item.color) + ' • الكمية ' + row.item.qty + '</div>' + (!row.variant || row.availableQty < row.item.qty ? '<div class="stock-indicator stock-low">' + escapeHtml(invalidMessages[invalidMessages.length - 1]) + '</div>' : '') + '</div><strong>' + formatCurrency(row.totalBase, AqqadStore.state.region, AqqadStore.state.settings) + '</strong></div>';
             }).join('');
             var selectedDelivery = deliveryList.filter(function (item) { return item.id === checkoutState.deliveryId; })[0] || deliveryList[0];
             var deliveryBase = selectedDelivery ? Number(selectedDelivery.price || 0) : 0;
@@ -66,7 +70,7 @@
             var paymentHtml = AqqadStore.state.settings.paymentMethods.map(function (method) {
                 return '<button class="option-card ' + (method === checkoutState.paymentMethod ? 'active' : '') + '" type="button" onclick="selectPayment(\'' + method + '\')"><strong>' + escapeHtml(getPaymentMethodLabel(method)) + '</strong><div style="color:var(--muted)">' + (method === 'visa' ? 'سيتم التواصل معك لإكمال تفاصيل الدفع.' : 'الدفع عند الاستلام متاح مباشرة.') + '</div></button>';
             }).join('');
-            content.innerHTML = '<div class="checkout-grid"><div class="checkout-card"><h3>مراجعة الطلب</h3><div class="stack">' + itemsHtml + '</div><h3 style="margin-top:22px">منطقة التوصيل</h3><div class="option-cards">' + deliveryHtml + '</div><h3 style="margin-top:22px">طريقة الدفع</h3><div class="option-cards">' + paymentHtml + '</div></div><div class="checkout-card"><h3>بيانات المستلم</h3><div class="stack"><input id="customerName" type="text" placeholder="الاسم الكامل"><input id="customerPhone" type="tel" placeholder="رقم الهاتف"><input id="customerAddress" type="text" placeholder="العنوان الكامل"><textarea id="customerNotes" rows="4" placeholder="ملاحظات إضافية (اختياري)"></textarea></div><div style="margin-top:18px" class="stack"><div class="summary-line"><span>المجموع</span><strong>' + formatCurrency(subtotalBase, AqqadStore.state.region, AqqadStore.state.settings) + '</strong></div><div class="summary-line"><span>التوصيل</span><strong>' + formatCurrency(deliveryBase, AqqadStore.state.region, AqqadStore.state.settings) + '</strong></div><div class="summary-line" style="font-size:1.15rem"><span>الإجمالي</span><strong>' + formatCurrency(totalBase, AqqadStore.state.region, AqqadStore.state.settings) + '</strong></div></div><div class="action-row" style="margin-top:20px"><button class="btn btn-primary" type="button" onclick="submitCheckout()" style="flex:1">تأكيد الطلب</button><a class="btn btn-secondary" href="index.html">العودة للتسوّق</a></div></div></div>';
+            content.innerHTML = (invalidMessages.length ? '<div class="notice-card stock-low" id="checkoutValidationNotice">' + escapeHtml(invalidMessages[0]) + '</div>' : '<div id="checkoutValidationNotice"></div>') + '<div class="checkout-grid"><div class="checkout-card"><h3>مراجعة الطلب</h3><div class="stack">' + itemsHtml + '</div><h3 style="margin-top:22px">منطقة التوصيل</h3><div class="option-cards">' + deliveryHtml + '</div><h3 style="margin-top:22px">طريقة الدفع</h3><div class="option-cards">' + paymentHtml + '</div></div><div class="checkout-card"><h3>بيانات المستلم</h3><div class="stack"><input id="customerName" type="text" placeholder="الاسم الكامل"><input id="customerPhone" type="tel" placeholder="رقم الهاتف"><input id="customerAddress" type="text" placeholder="العنوان الكامل"><textarea id="customerNotes" rows="4" placeholder="ملاحظات إضافية (اختياري)"></textarea></div><div style="margin-top:18px" class="stack"><div class="summary-line"><span>المجموع</span><strong>' + formatCurrency(subtotalBase, AqqadStore.state.region, AqqadStore.state.settings) + '</strong></div><div class="summary-line"><span>التوصيل</span><strong>' + formatCurrency(deliveryBase, AqqadStore.state.region, AqqadStore.state.settings) + '</strong></div><div class="summary-line" style="font-size:1.15rem"><span>الإجمالي</span><strong>' + formatCurrency(totalBase, AqqadStore.state.region, AqqadStore.state.settings) + '</strong></div></div><div class="action-row" style="margin-top:20px"><button class="btn btn-primary" type="button" onclick="submitCheckout()" style="flex:1">تأكيد الطلب</button><a class="btn btn-secondary" href="index.html">العودة للتسوّق</a></div></div></div>';
         }
         function selectDelivery(id) { checkoutState.deliveryId = id; renderCheckoutPage(); }
         function selectPayment(method) { checkoutState.paymentMethod = method; renderCheckoutPage(); }
@@ -86,6 +90,19 @@
                 return;
             }
             var rows = getCheckoutRows();
+            var invalidRows = rows.filter(function (row) {
+                return !row.variant || row.availableQty < row.item.qty;
+            });
+            if (invalidRows.length) {
+                for (var i = 0; i < invalidRows.length; i += 1) {
+                    AqqadStore.removeCartLine(invalidRows[i].product.id, invalidRows[i].item.size, invalidRows[i].item.color);
+                }
+                AqqadStore.showToast('عذراً، تم تحديث السلة بعد نفاد بعض القطع من المخزن.');
+                var firstInvalid = invalidRows[0];
+                document.getElementById('checkoutValidationNotice').innerHTML = escapeHtml('عذراً، المنتج ' + firstInvalid.product.name + ' مقاس ' + firstInvalid.item.size + ' لون ' + firstInvalid.item.color + ' لم يعد متوفراً. يرجى تحديث السلة.');
+                renderCheckoutPage();
+                return;
+            }
             var subtotalBase = 0;
             var items = rows.map(function (row) {
                 subtotalBase += row.totalBase;
@@ -94,11 +111,12 @@
                     name: row.product.name,
                     brand: row.product.brand,
                     type: row.product.type,
-                    size: row.size.label,
+                    size: row.item.size,
+                    color: row.item.color,
                     qty: row.item.qty,
                     unitPriceBase: row.pricing.finalBase,
                     lineTotalBase: row.totalBase,
-                    image: row.product.image
+                    image: row.lineImage || row.product.image
                 };
             });
             var orderNumber = makeOrderId();
@@ -132,7 +150,11 @@
             AqqadStore.createOrder(payload, function () {
                 AqqadStore.saveLastOrder(saved);
                 AqqadStore.clearCart();
-                location.href = 'confirmation.html?order=' + encodeURIComponent(orderNumber) + '&whatsapp=1';
+                if (checkoutState.paymentMethod === 'cod') {
+                    location.href = 'confirmation.html?order=' + encodeURIComponent(orderNumber) + '&whatsapp=1';
+                } else {
+                    location.href = 'confirmation.html?order=' + encodeURIComponent(orderNumber);
+                }
             }, function (message) {
                 AqqadStore.showToast(message);
             });

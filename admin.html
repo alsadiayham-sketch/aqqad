@@ -82,7 +82,7 @@
                         <input id="importProductsFile" type="file" accept=".csv,.xlsx,.xls">
                         <button class="ghost-btn" id="importProductsBtn" type="button">استيراد ملف</button>
                     </div>
-                    <div class="table-wrap"><table><thead><tr><th>الاسم</th><th>النوع</th><th>الفئة العمرية</th><th>البراند</th><th>أول سعر</th><th>الحالة</th><th>إجراء</th></tr></thead><tbody id="productsTableBody"></tbody></table></div>
+                    <div class="table-wrap"><table><thead><tr><th>الاسم</th><th>النوع</th><th>الفئة العمرية</th><th>البراند</th><th>أول سعر</th><th>إجمالي المخزون</th><th>الحالة</th><th>إجراء</th></tr></thead><tbody id="productsTableBody"></tbody></table></div>
                 </div>
             </section>
 
@@ -194,13 +194,31 @@
                     <select id="productAgeGroup"><option value="">بدون</option><option value="baby">حديثي الولادة</option><option value="toddler">طفل صغير</option><option value="kids">أطفال</option><option value="teens">مراهقين</option></select>
                     <select id="productSubCategory"><option value="accessories">إكسسوارات</option><option value="creams">كريمات</option><option value="perfumes">عطور</option></select>
                     <input id="productBrand" type="text" placeholder="البراند">
-                    <select id="productStatus"><option value="normal">متوفر</option><option value="bestseller">الأكثر طلباً</option><option value="special">قطعة مميزة</option><option value="soldout">نفدت الكمية</option></select>
+                    <select id="productStatus"><option value="active">مرئي</option><option value="hidden">مخفي</option></select>
                     <input id="productDiscount" type="number" min="0" max="90" placeholder="خصم أساسي %">
                 </div>
-                <input id="productImage" type="url" placeholder="رابط الصورة">
+                <input id="productImage" type="url" placeholder="رابط الصورة الرئيسية (اختياري)">
                 <textarea id="productDescription" rows="3" placeholder="وصف المنتج"></textarea>
-                <textarea id="productSizes" rows="3" placeholder="المقاسات مفصولة بفاصلة"></textarea>
-                <textarea id="productPrices" rows="3" placeholder="الأسعار الأساسية بالشيكل وبنفس ترتيب المقاسات"></textarea>
+                <div class="sub-block stack">
+                    <div class="toolbar wrap">
+                        <h4>المقاسات</h4>
+                        <input id="newSizeInput" type="text" placeholder="مقاس جديد" style="max-width:220px">
+                        <button class="ghost-btn" id="addSizeBtn" type="button">إضافة مقاس</button>
+                        <button class="ghost-btn" id="applyPresetSizesBtn" type="button">المقاسات الافتراضية</button>
+                    </div>
+                    <div id="productSizesList" class="token-list"></div>
+                </div>
+                <div class="sub-block stack">
+                    <div class="toolbar wrap">
+                        <h4>الألوان</h4>
+                        <button class="ghost-btn" id="addColorBtn" type="button">إضافة لون</button>
+                    </div>
+                    <div id="productColorsList" class="stack"></div>
+                </div>
+                <div class="sub-block stack">
+                    <h4>جدول المخزون والأسعار</h4>
+                    <div id="productVariantsGrid" class="table-wrap"></div>
+                </div>
                 <button class="primary-btn" type="submit">حفظ المنتج</button>
             </form>
         </div>

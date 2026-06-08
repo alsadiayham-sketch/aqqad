@@ -28,7 +28,7 @@ var ACCESSORY_SUBCATEGORY_OPTIONS = {
 var AGE_GROUP_OPTIONS = {
     baby: { key: 'baby', label: 'حديثي الولادة (0-12 شهر)', sizes: ['0-3 شهور', '3-6 شهور', '6-9 شهور', '9-12 شهور'] },
     toddler: { key: 'toddler', label: 'طفل صغير (1-4 سنة)', sizes: ['1-2', '2-3', '3-4'] },
-    kids: { key: 'kids', label: 'أطفال (5-10 سنة)', sizes: ['S', 'M', 'L', 'XL'] },
+    kids: { key: 'kids', label: 'أطفال (5-10 سنة)', sizes: ['4-5', '5-6', '6-7', '7-8', '8-9', '9-10'] },
     teens: { key: 'teens', label: 'مراهقين (11-15 سنة)', sizes: ['S', 'M', 'L', 'XL', 'XXL'] }
 };
 
@@ -158,21 +158,53 @@ function getAccessorySubcategoryLabel(key) {
 
 function getProductStatusLabel(status) {
     var map = {
-        normal: 'متوفر',
-        bestseller: 'الأكثر طلباً',
-        special: 'قطعة مميّزة',
-        soldout: 'نفدت الكمية'
+        active: 'متوفر',
+        soldout: 'نفدت الكمية',
+        hidden: 'مخفي'
     };
-    return map[String(status || 'normal').toLowerCase()] || map.normal;
+    return map[String(status || 'active').toLowerCase()] || map.active;
 }
 
 function normalizeProductStatus(value) {
-    var status = String(value || 'normal').toLowerCase();
-    if (status === 'active') status = 'normal';
-    return ['normal', 'bestseller', 'special', 'soldout'].indexOf(status) >= 0 ? status : 'normal';
+    var status = String(value || 'active').toLowerCase();
+    return ['active', 'soldout', 'hidden'].indexOf(status) >= 0 ? status : 'active';
 }
 
-function normalizeSizeEntry(entry, defaultLabel) {
+function normalizeColorName(value, fallback) {
+    var name = String(value || fallback || 'الافتراضي').trim();
+    return name || 'الافتراضي';
+}
+
+function normalizeColorEntry(entry, index, fallbackImage) {
+    var source = entry || {};
+    var images = safeArray(source.images || source.imageUrls).map(function (image) {
+        return String(image || '').trim();
+    }).filter(Boolean);
+    if (!images.length && source.image) images = [String(source.image).trim()];
+    if (!images.length && fallbackImage) images = [fallbackImage];
+    return {
+        name: normalizeColorName(source.name, 'لون ' + (index + 1)),
+        hex: String(source.hex || '#d9d9d9').trim() || '#d9d9d9',
+        images: images.length ? images : [FALLBACK_IMAGE]
+    };
+}
+
+function getDefaultSizesForProduct(type, ageGroup) {
+    var safeType = normalizeProductType(type);
+    if (safeType === 'shoes') {
+        return SHOE_SIZES.slice(4, 9).map(function (size) { return { size: size, label: size, price: 0 }; });
+    }
+    if (safeType === 'clothes' && AGE_GROUP_OPTIONS[ageGroup]) {
+        return AGE_GROUP_OPTIONS[ageGroup].sizes.map(function (size) { return { size: size, label: size, price: 0 }; });
+    }
+    return [{ size: 'واحد', label: 'واحد', price: 0 }];
+}
+
+function getDefaultSizeLabels(type, ageGroup) {
+    return getDefaultSizesForProduct(type, ageGroup).map(function (entry) { return entry.label; });
+}
+
+function normalizeLegacySizeEntry(entry, defaultLabel) {
     if (typeof entry === 'string') {
         return { size: entry, label: entry, price: 0 };
     }
@@ -185,23 +217,184 @@ function normalizeSizeEntry(entry, defaultLabel) {
     };
 }
 
-function getDefaultSizesForProduct(type, ageGroup) {
-    var safeType = normalizeProductType(type);
-    if (safeType === 'shoes') {
-        return SHOE_SIZES.slice(0, 5).map(function (size) { return { size: size, label: size, price: 0 }; });
+function normalizeColors(source, type, fallbackImage) {
+    var colors = safeArray(source).map(function (entry, index) {
+        return normalizeColorEntry(entry, index, fallbackImage);
+    }).filter(function (entry) {
+        return entry.name;
+    });
+    if (!colors.length) {
+        colors = [normalizeColorEntry({ name: 'الافتراضي', hex: type === 'creams' ? '#f3d6d8' : '#d9d9d9', images: fallbackImage ? [fallbackImage] : [FALLBACK_IMAGE] }, 0, fallbackImage)];
     }
-    if (safeType === 'clothes' && AGE_GROUP_OPTIONS[ageGroup]) {
-        return AGE_GROUP_OPTIONS[ageGroup].sizes.map(function (size) { return { size: size, label: size, price: 0 }; });
-    }
-    return [{ size: 'واحد', label: 'واحد', price: 0 }];
+    return colors;
 }
 
-function normalizeSizes(source, type, ageGroup) {
-    var list = safeArray(source).map(function (entry) { return normalizeSizeEntry(entry); }).filter(function (entry) {
+function buildVariantsFromLegacySizes(legacySizes, colors) {
+    var sizeEntries = safeArray(legacySizes).map(function (entry) {
+        return normalizeLegacySizeEntry(entry);
+    }).filter(function (entry) {
         return entry.label;
     });
-    if (!list.length) list = getDefaultSizesForProduct(type, ageGroup);
-    return list;
+    if (!sizeEntries.length) return [];
+    var defaultColor = colors[0] || { name: 'الافتراضي' };
+    return sizeEntries.map(function (entry) {
+        return {
+            size: entry.label,
+            color: defaultColor.name,
+            stock: 10,
+            price: Math.max(0, Number(entry.price) || 0)
+        };
+    });
+}
+
+function normalizeVariantEntry(entry, colors) {
+    var source = entry || {};
+    var defaultColor = colors[0] ? colors[0].name : 'الافتراضي';
+    return {
+        size: String(source.size || source.label || 'واحد').trim() || 'واحد',
+        color: normalizeColorName(source.color, defaultColor),
+        stock: Math.max(0, parseInt(source.stock, 10) || 0),
+        price: Math.max(0, Number(source.price != null ? source.price : source.basePrice) || 0)
+    };
+}
+
+function ensureVariantMatrix(variants, colors, sizeLabels) {
+    var colorNames = colors.map(function (color) { return color.name; });
+    var output = [];
+    var seen = {};
+    var i;
+    for (i = 0; i < variants.length; i += 1) {
+        var variant = variants[i];
+        if (!variant.size) continue;
+        if (colorNames.indexOf(variant.color) < 0) variant.color = colorNames[0] || 'الافتراضي';
+        var key = variant.size + '||' + variant.color;
+        if (seen[key]) continue;
+        seen[key] = true;
+        output.push(variant);
+    }
+    for (i = 0; i < sizeLabels.length; i += 1) {
+        for (var j = 0; j < colorNames.length; j += 1) {
+            var comboKey = sizeLabels[i] + '||' + colorNames[j];
+            if (!seen[comboKey]) {
+                output.push({ size: sizeLabels[i], color: colorNames[j], stock: 0, price: 0 });
+                seen[comboKey] = true;
+            }
+        }
+    }
+    return output;
+}
+
+function normalizeVariants(source, colors, type, ageGroup, legacySizes) {
+    var variants = safeArray(source).map(function (entry) {
+        return normalizeVariantEntry(entry, colors);
+    }).filter(function (entry) {
+        return entry.size;
+    });
+    if (!variants.length) variants = buildVariantsFromLegacySizes(legacySizes, colors);
+    var sizeLabels = [];
+    for (var i = 0; i < variants.length; i += 1) {
+        if (sizeLabels.indexOf(variants[i].size) < 0) sizeLabels.push(variants[i].size);
+    }
+    if (!sizeLabels.length) sizeLabels = getDefaultSizeLabels(type, ageGroup);
+    return ensureVariantMatrix(variants, colors, sizeLabels);
+}
+
+function getVariant(product, size, colorName) {
+    var variants = safeArray(product && product.variants);
+    var targetSize = String(size == null ? '' : size).trim();
+    var targetColor = normalizeColorName(colorName, '');
+    for (var i = 0; i < variants.length; i += 1) {
+        var variant = variants[i];
+        if (targetSize && String(variant.size) !== targetSize) continue;
+        if (targetColor && String(variant.color) !== targetColor) continue;
+        return {
+            size: String(variant.size),
+            label: String(variant.size),
+            color: String(variant.color),
+            stock: Math.max(0, parseInt(variant.stock, 10) || 0),
+            price: Math.max(0, Number(variant.price) || 0)
+        };
+    }
+    return null;
+}
+
+function getProductSizeLabels(product) {
+    var variants = safeArray(product && product.variants);
+    var labels = [];
+    for (var i = 0; i < variants.length; i += 1) {
+        if (labels.indexOf(variants[i].size) < 0) labels.push(String(variants[i].size));
+    }
+    if (!labels.length) labels = getDefaultSizeLabels(product && product.type, product && product.ageGroup);
+    return labels;
+}
+
+function getColorByName(product, colorName) {
+    var colors = safeArray(product && product.colors);
+    var target = normalizeColorName(colorName, '');
+    for (var i = 0; i < colors.length; i += 1) {
+        if (String(colors[i].name) === target) return colors[i];
+    }
+    return colors[0] || null;
+}
+
+function getProductImageForColor(product, colorName) {
+    var color = getColorByName(product, colorName);
+    if (color && safeArray(color.images).length) return color.images[0];
+    return String(product && product.image || FALLBACK_IMAGE);
+}
+
+function getAvailableColors(product) {
+    var colors = safeArray(product && product.colors);
+    var output = [];
+    for (var i = 0; i < colors.length; i += 1) {
+        if (isColorAvailable(product, colors[i].name)) output.push(colors[i]);
+    }
+    return output;
+}
+
+function getAvailableSizes(product, colorName) {
+    var variants = safeArray(product && product.variants);
+    var sizes = [];
+    for (var i = 0; i < variants.length; i += 1) {
+        var variant = variants[i];
+        if (String(variant.color) !== String(colorName)) continue;
+        if ((parseInt(variant.stock, 10) || 0) <= 0) continue;
+        if (sizes.indexOf(variant.size) < 0) sizes.push(String(variant.size));
+    }
+    return sizes;
+}
+
+function isColorAvailable(product, colorName) {
+    var variants = safeArray(product && product.variants);
+    for (var i = 0; i < variants.length; i += 1) {
+        if (String(variants[i].color) === String(colorName) && (parseInt(variants[i].stock, 10) || 0) > 0) return true;
+    }
+    return false;
+}
+
+function isProductSoldOut(product) {
+    var variants = safeArray(product && product.variants);
+    if (!variants.length) return true;
+    for (var i = 0; i < variants.length; i += 1) {
+        if ((parseInt(variants[i].stock, 10) || 0) > 0) return false;
+    }
+    return true;
+}
+
+function getTotalStock(product) {
+    var variants = safeArray(product && product.variants);
+    var total = 0;
+    for (var i = 0; i < variants.length; i += 1) total += Math.max(0, parseInt(variants[i].stock, 10) || 0);
+    return total;
+}
+
+function getDefaultVariant(product, preferredColor) {
+    var availableColors = getAvailableColors(product);
+    var targetColor = preferredColor || (availableColors[0] && availableColors[0].name) || (product && product.colors && product.colors[0] ? product.colors[0].name : '');
+    var sizes = getAvailableSizes(product, targetColor);
+    if (sizes.length) return getVariant(product, sizes[0], targetColor);
+    var variants = safeArray(product && product.variants);
+    return variants.length ? getVariant(product, variants[0].size, variants[0].color) : null;
 }
 
 function normalizeProduct(product) {
@@ -211,22 +404,30 @@ function normalizeProduct(product) {
     var subCategory = type === 'creams' ? String(source.subCategory || source.subcategory || 'creams').toLowerCase() : 'accessories';
     if (type === 'accessories') subCategory = 'accessories';
     if (type === 'creams' && ['creams', 'perfumes'].indexOf(subCategory) < 0) subCategory = 'creams';
-    var sizes = normalizeSizes(source.sizes, type, ageGroup);
+    var sourceImage = String(source.image || source.imageUrl || FALLBACK_IMAGE).trim() || FALLBACK_IMAGE;
+    var colors = normalizeColors(source.colors, type, sourceImage);
+    var variants = normalizeVariants(source.variants, colors, type, ageGroup, source.sizes);
+    var displayImage = sourceImage;
+    if (!displayImage || displayImage === FALLBACK_IMAGE) displayImage = getProductImageForColor({ colors: colors, image: sourceImage }, colors[0] ? colors[0].name : '');
+    var status = normalizeProductStatus(source.status);
+    if (status !== 'hidden') status = isProductSoldOut({ variants: variants }) ? 'soldout' : 'active';
     return {
-        id: String(source.id || slugify((source.name || 'product') + '-' + (source.brand || 'brand'))),
+        id: String(source.id || String(new Date().getTime())).trim(),
         name: String(source.name || '').trim(),
         type: type,
         brand: String(source.brand || 'Aqqad Kids').trim(),
-        sizes: sizes,
         ageGroup: ageGroup,
-        discount: Math.max(0, Number(source.discount) || 0),
-        image: String(source.image || source.imageUrl || FALLBACK_IMAGE).trim() || FALLBACK_IMAGE,
-        status: normalizeProductStatus(source.status),
         description: String(source.description || '').trim(),
+        status: status,
+        discount: Math.max(0, Number(source.discount) || 0),
+        image: displayImage || FALLBACK_IMAGE,
+        colors: colors,
+        variants: variants,
         subCategory: subCategory,
         categoryLabel: getTypeLabel(type),
         ageGroupLabel: getAgeGroupLabel(ageGroup),
-        createdAtIso: String(source.createdAtIso || '')
+        createdAtIso: String(source.createdAtIso || ''),
+        totalStock: getTotalStock({ variants: variants })
     };
 }
 
@@ -236,6 +437,12 @@ function normalizeProducts(list) {
     }).filter(function (item) {
         return item.name;
     }).sort(function (a, b) {
+        if (a.status !== b.status) {
+            if (a.status === 'hidden') return 1;
+            if (b.status === 'hidden') return -1;
+            if (a.status === 'soldout') return 1;
+            if (b.status === 'soldout') return -1;
+        }
         return String(a.name).localeCompare(String(b.name), 'ar');
     });
 }
@@ -352,11 +559,31 @@ function formatCurrency(basePrice, regionKey, settings) {
     return (safeRegion === 'jordan' ? 'JOD ' : '₪ ') + roundMoney(converted).toFixed(decimals);
 }
 
-function getPriceForSize(product, sizeIndex) {
-    var sizes = safeArray(product && product.sizes);
-    if (!sizes.length) return { label: 'واحد', size: 'واحد', price: 0 };
-    var index = Math.max(0, Math.min(parseInt(sizeIndex, 10) || 0, sizes.length - 1));
-    return normalizeSizeEntry(sizes[index], 'واحد');
+function getPriceForSize(product, sizeOrVariant, colorName) {
+    if (sizeOrVariant && typeof sizeOrVariant === 'object' && sizeOrVariant.size && sizeOrVariant.color) {
+        return getVariant(product, sizeOrVariant.size, sizeOrVariant.color) || getDefaultVariant(product, colorName) || { label: 'واحد', size: 'واحد', color: '', stock: 0, price: 0 };
+    }
+    var sizeLabels = getProductSizeLabels(product);
+    var selectedSize = '';
+    if (typeof sizeOrVariant === 'number') {
+        var index = Math.max(0, Math.min(parseInt(sizeOrVariant, 10) || 0, sizeLabels.length - 1));
+        selectedSize = sizeLabels[index] || '';
+    } else {
+        selectedSize = String(sizeOrVariant == null ? '' : sizeOrVariant).trim();
+    }
+    var variant = null;
+    if (selectedSize) variant = getVariant(product, selectedSize, colorName);
+    if (!variant && selectedSize) {
+        var variants = safeArray(product && product.variants);
+        for (var i = 0; i < variants.length; i += 1) {
+            if (String(variants[i].size) === selectedSize) {
+                variant = getVariant(product, selectedSize, variants[i].color);
+                break;
+            }
+        }
+    }
+    if (!variant) variant = getDefaultVariant(product, colorName);
+    return variant || { label: selectedSize || 'واحد', size: selectedSize || 'واحد', color: colorName || '', stock: 0, price: 0 };
 }
 
 function getProductDiscountPercent(product, discounts) {
@@ -375,12 +602,13 @@ function getProductDiscountPercent(product, discounts) {
     return applied;
 }
 
-function getFinalPrice(product, sizeIndex, discounts, regionKey, settings) {
-    var sizeData = getPriceForSize(product, sizeIndex);
-    var originalBase = Math.max(0, Number(sizeData.price) || 0);
+function getFinalPrice(product, sizeOrVariant, discounts, regionKey, settings, colorName) {
+    var variant = getPriceForSize(product, sizeOrVariant, colorName);
+    var originalBase = Math.max(0, Number(variant.price) || 0);
     var discountPercent = getProductDiscountPercent(product, discounts);
     var finalBase = discountPercent ? roundMoney(originalBase * (1 - discountPercent / 100)) : originalBase;
     return {
+        variant: variant,
         originalBase: originalBase,
         finalBase: finalBase,
         originalFormatted: formatCurrency(originalBase, regionKey, settings),
@@ -391,16 +619,23 @@ function getFinalPrice(product, sizeIndex, discounts, regionKey, settings) {
 }
 
 function normalizeCartItems(items, products) {
-    var list = safeArray(items).map(function (item) {
+    var rawItems = safeArray(items);
+    for (var i = 0; i < rawItems.length; i += 1) {
+        if (rawItems[i] && rawItems[i].sizeIdx != null) return [];
+    }
+    var list = rawItems.map(function (item) {
         return {
-            id: String(item.id || ''),
-            sizeIdx: Math.max(0, parseInt(item.sizeIdx, 10) || 0),
-            qty: Math.max(1, parseInt(item.qty, 10) || 1)
+            id: String(item && item.id || ''),
+            color: String(item && (item.color || item.colorName) || '').trim(),
+            size: String(item && item.size || '').trim(),
+            qty: Math.max(1, parseInt(item && item.qty, 10) || 1)
         };
     }).filter(function (item) {
-        if (!item.id) return false;
+        if (!item.id || !item.color || !item.size) return false;
         if (!products || !products.length) return true;
-        return !!getProductById(products, item.id);
+        var product = getProductById(products, item.id);
+        if (!product) return false;
+        return !!getVariant(product, item.size, item.color);
     });
     return list;
 }

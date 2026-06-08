@@ -1,32 +1,369 @@
+function seedImage(photoId, sig) {
+    return 'https://images.unsplash.com/' + photoId + '?w=400&h=400&fit=crop' + (sig ? '&sig=' + sig : '');
+}
+
 var SEED_PRODUCTS = [
-    { id: 'aq-baby-cloud-romper', name: 'رومبر غيمة ناعمة', type: 'clothes', brand: 'Carter\'s', ageGroup: 'baby', discount: 10, image: 'https://images.unsplash.com/photo-1519345182560-3f2917c472ef?auto=format&fit=crop&w=900&q=80', status: 'bestseller', description: 'رومبر قطني بخياطة لطيفة وسهلة اللبس لأيام البيبي الأولى.', sizes: [{ size: '0-3 شهور', price: 42 }, { size: '3-6 شهور', price: 42 }, { size: '6-9 شهور', price: 46 }] },
-    { id: 'aq-baby-sun-set', name: 'طقم شمس البيبي', type: 'clothes', brand: 'Zara Kids', ageGroup: 'baby', discount: 0, image: 'https://images.unsplash.com/photo-1503919545889-aef636e10ad4?auto=format&fit=crop&w=900&q=80', status: 'special', description: 'طقم قطعتين بملمس حنون وألوان صباحية هادئة.', sizes: [{ size: '3-6 شهور', price: 58 }, { size: '6-9 شهور', price: 58 }, { size: '9-12 شهور', price: 62 }] },
-    { id: 'aq-toddler-blossom-dress', name: 'فستان زهر الربيع', type: 'clothes', brand: 'Mayoral', ageGroup: 'toddler', discount: 12, image: 'https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?auto=format&fit=crop&w=900&q=80', status: 'special', description: 'فستان طبقات خفيف بحضور مبهج للحفلات العائلية.', sizes: [{ size: '1-2', price: 82 }, { size: '2-3', price: 82 }, { size: '3-4', price: 88 }] },
-    { id: 'aq-toddler-sand-set', name: 'طقم رمل اللعب', type: 'clothes', brand: 'LC Waikiki Kids', ageGroup: 'toddler', discount: 5, image: 'https://images.unsplash.com/photo-1516257984-b1b4d707412e?auto=format&fit=crop&w=900&q=80', status: 'normal', description: 'طقم يومي مرن للحركة واللعب مع قماش سهل الغسل.', sizes: [{ size: '1-2', price: 64 }, { size: '2-3', price: 64 }, { size: '3-4', price: 68 }] },
-    { id: 'aq-kids-lavender-jacket', name: 'جاكيت لافندر مرح', type: 'clothes', brand: 'Mango Kids', ageGroup: 'kids', discount: 8, image: 'https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?auto=format&fit=crop&w=900&q=80', status: 'bestseller', description: 'جاكيت خفيف يمنح الإطلالة دفئاً أنيقاً في الصباح والمساء.', sizes: [{ size: 'S', price: 115 }, { size: 'M', price: 118 }, { size: 'L', price: 122 }, { size: 'XL', price: 128 }] },
-    { id: 'aq-kids-linen-shirt', name: 'قميص لينن للأبطال', type: 'clothes', brand: 'H&M Kids', ageGroup: 'kids', discount: 0, image: 'https://images.unsplash.com/photo-1483985988355-763728e1935b?auto=format&fit=crop&w=900&q=80', status: 'normal', description: 'قميص عملي للمشاوير والمناسبات بخامة مريحة على البشرة.', sizes: [{ size: 'S', price: 79 }, { size: 'M', price: 79 }, { size: 'L', price: 84 }, { size: 'XL', price: 84 }] },
-    { id: 'aq-kids-ribbon-set', name: 'طقم فيونكة سكري', type: 'clothes', brand: 'Zara Kids', ageGroup: 'kids', discount: 6, image: 'https://images.unsplash.com/photo-1512436991641-6745cdb1723f?auto=format&fit=crop&w=900&q=80', status: 'special', description: 'إطلالة متناسقة للبنات مع تفاصيل ناعمة ولمعة راقية.', sizes: [{ size: 'S', price: 102 }, { size: 'M', price: 105 }, { size: 'L', price: 109 }, { size: 'XL', price: 112 }] },
-    { id: 'aq-teens-oat-hoodie', name: 'هودي شوفان مريح', type: 'clothes', brand: 'Mango Kids', ageGroup: 'teens', discount: 14, image: 'https://images.unsplash.com/photo-1541099649105-f69ad21f3246?auto=format&fit=crop&w=900&q=80', status: 'bestseller', description: 'هودي واسع بستايل عصري للأعمار الكبيرة ولمسات يومية مرنة.', sizes: [{ size: 'S', price: 128 }, { size: 'M', price: 132 }, { size: 'L', price: 136 }, { size: 'XL', price: 139 }, { size: 'XXL', price: 144 }] },
-    { id: 'aq-teens-soft-skirt', name: 'تنورة موف ناعمة', type: 'clothes', brand: 'Zara Kids', ageGroup: 'teens', discount: 9, image: 'https://images.unsplash.com/photo-1496747611176-843222e1e57c?auto=format&fit=crop&w=900&q=80', status: 'special', description: 'تنورة بطبقات خفيفة تعطي الحركة شكلاً لعبياً أنيقاً.', sizes: [{ size: 'S', price: 96 }, { size: 'M', price: 98 }, { size: 'L', price: 102 }, { size: 'XL', price: 106 }, { size: 'XXL', price: 110 }] },
-    { id: 'aq-first-step-shoes', name: 'حذاء أول خطوة', type: 'shoes', brand: 'Chicco', discount: 0, image: 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?auto=format&fit=crop&w=900&q=80', status: 'bestseller', description: 'حذاء بقاعدة مرنة يدعم الخطوات الأولى بلطف وثبات.', sizes: [{ size: '16', price: 68 }, { size: '17', price: 68 }, { size: '18', price: 72 }, { size: '19', price: 72 }] },
-    { id: 'aq-gold-party-shoes', name: 'حذاء الحفلة الذهبي', type: 'shoes', brand: 'Zara Kids', discount: 10, image: 'https://images.unsplash.com/photo-1543163521-1bf539c55dd2?auto=format&fit=crop&w=900&q=80', status: 'special', description: 'حذاء لامع للمناسبات الصغيرة بتفاصيل مريحة للارتداء الطويل.', sizes: [{ size: '24', price: 92 }, { size: '25', price: 95 }, { size: '26', price: 98 }, { size: '27', price: 100 }] },
-    { id: 'aq-cloud-sneaker', name: 'سنيكر كلاود', type: 'shoes', brand: 'Nike Kids', discount: 0, image: 'https://images.unsplash.com/photo-1491553895911-0055eca6402d?auto=format&fit=crop&w=900&q=80', status: 'normal', description: 'حذاء يومي خفيف بمساحة تنفس ومرونة للحركة السريعة.', sizes: [{ size: '28', price: 110 }, { size: '29', price: 110 }, { size: '30', price: 114 }, { size: '31', price: 118 }, { size: '32', price: 122 }] },
-    { id: 'aq-play-sandal', name: 'صندل اللعب الصيفي', type: 'shoes', brand: 'LC Waikiki Kids', discount: 7, image: 'https://images.unsplash.com/photo-1525966222134-fcfa99b8ae77?auto=format&fit=crop&w=900&q=80', status: 'normal', description: 'صندل عملي للمشاوير والنشاطات مع تثبيت مريح للقدم.', sizes: [{ size: '20', price: 76 }, { size: '21', price: 76 }, { size: '22', price: 79 }, { size: '23', price: 79 }, { size: '24', price: 82 }] },
-    { id: 'aq-school-sneaker', name: 'سنيكر المدرسة الهادئ', type: 'shoes', brand: 'Adidas Kids', discount: 5, image: 'https://images.unsplash.com/photo-1515347619252-60a4bf4fff4f?auto=format&fit=crop&w=900&q=80', status: 'bestseller', description: 'تصميم يومي خفيف يناسب المدرسة والرحلات وأيام اللعب الطويلة.', sizes: [{ size: '33', price: 128 }, { size: '34', price: 131 }, { size: '35', price: 135 }, { size: '36', price: 139 }, { size: '37', price: 142 }, { size: '38', price: 145 }] },
-    { id: 'aq-pearl-headband', name: 'طوق لؤلؤ صغير', type: 'accessories', subCategory: 'accessories', brand: 'Aqqad Kids', discount: 0, image: 'https://images.unsplash.com/photo-1630019852942-f89202989a59?auto=format&fit=crop&w=900&q=80', status: 'bestseller', description: 'طوق شعر يضيف لمعة ناعمة على الإطلالات اليومية والمناسبات.', sizes: [{ size: 'واحد', price: 24 }] },
-    { id: 'aq-mini-backpack', name: 'حقيبة ظهر ميني', type: 'accessories', subCategory: 'accessories', brand: 'Mango Kids', discount: 0, image: 'https://images.unsplash.com/photo-1512436991641-6745cdb1723f?auto=format&fit=crop&w=900&q=80', status: 'special', description: 'حقيبة صغيرة لطيفة للرحلات الخفيفة والطلعات السريعة.', sizes: [{ size: 'واحد', price: 72 }] },
-    { id: 'aq-star-cap', name: 'قبعة نجمة ناعمة', type: 'accessories', subCategory: 'accessories', brand: 'Mayoral', discount: 5, image: 'https://images.unsplash.com/photo-1521369909029-2afed882baee?auto=format&fit=crop&w=900&q=80', status: 'normal', description: 'قبعة قطنية للحماية من الشمس بستايل طفولي مرح.', sizes: [{ size: 'واحد', price: 32 }] },
-    { id: 'aq-blanket-caramel', name: 'بطانية كراميل هادئة', type: 'accessories', subCategory: 'accessories', brand: 'Aqqad Kids', discount: 0, image: 'https://images.unsplash.com/photo-1515488764276-beab7607c1e6?auto=format&fit=crop&w=900&q=80', status: 'special', description: 'بطانية مواليد ناعمة جداً لتغمر الطفل بالدفء طوال اليوم.', sizes: [{ size: 'واحد', price: 61 }] },
-    { id: 'aq-soft-cream', name: 'كريم نعومة يومية', type: 'creams', subCategory: 'creams', brand: 'Johnson\'s Baby', discount: 0, image: 'https://images.unsplash.com/photo-1556228578-8c89e6adf883?auto=format&fit=crop&w=900&q=80', status: 'normal', description: 'كريم لطيف للترطيب اليومي بتركيبة مخصصة للبشرة الحساسة.', sizes: [{ size: 'واحد', price: 31 }] },
-    { id: 'aq-baby-lotion', name: 'لوشن عناية دافئ', type: 'creams', subCategory: 'creams', brand: 'Chicco', discount: 10, image: 'https://images.unsplash.com/photo-1620916566398-39f1143ab7be?auto=format&fit=crop&w=900&q=80', status: 'special', description: 'لوشن عناية بملمس خفيف ورائحة هادئة تلائم الاستخدام اليومي.', sizes: [{ size: 'واحد', price: 43 }] },
-    { id: 'aq-cloud-perfume', name: 'عطر كلاود للأطفال', type: 'creams', subCategory: 'perfumes', brand: 'Aqqad Kids', discount: 0, image: 'https://images.unsplash.com/photo-1541643600914-78b084683601?auto=format&fit=crop&w=900&q=80', status: 'bestseller', description: 'عطر خفيف بروح نظيفة ومنعشة يمنح الملابس لمسة طفولية لطيفة.', sizes: [{ size: 'واحد', price: 39 }] },
-    { id: 'aq-powder-blush', name: 'بودرة بلَش ناعمة', type: 'creams', subCategory: 'creams', brand: 'Johnson\'s Baby', discount: 0, image: 'https://images.unsplash.com/photo-1556228579-0d85b1a4d571?auto=format&fit=crop&w=900&q=80', status: 'normal', description: 'بودرة أطفال كلاسيكية بملمس حريري ورائحة محببة.', sizes: [{ size: 'واحد', price: 26 }] },
-    { id: 'aq-soft-mist', name: 'بخاخ رائحة القطن', type: 'creams', subCategory: 'perfumes', brand: 'Aqqad Kids', discount: 8, image: 'https://images.unsplash.com/photo-1615634260167-c8cdede054de?auto=format&fit=crop&w=900&q=80', status: 'special', description: 'بخاخ ملابس خفيف يمنح القطع رائحة دافئة تشبه الحضن.', sizes: [{ size: 'واحد', price: 35 }] }
+    {
+        id: '1001',
+        name: 'رومبر قطني ناعم',
+        type: 'clothes',
+        brand: 'عقاد كيدز',
+        ageGroup: 'baby',
+        description: 'رومبر يومي بخامة قطنية مرنة ولمسات مريحة لحديثي الولادة.',
+        discount: 10,
+        colors: [
+            { name: 'أزرق سماوي', hex: '#87CEEB', images: [seedImage('photo-1519345182560-3f2917c472ef', 1), seedImage('photo-1519345182560-3f2917c472ef', 2)] },
+            { name: 'وردي', hex: '#FFB6C1', images: [seedImage('photo-1503919545889-aef636e10ad4', 3), seedImage('photo-1503919545889-aef636e10ad4', 4)] }
+        ],
+        variants: [
+            { size: '0-3 شهور', color: 'أزرق سماوي', stock: 25, price: 89 },
+            { size: '3-6 شهور', color: 'أزرق سماوي', stock: 18, price: 89 },
+            { size: '6-9 شهور', color: 'أزرق سماوي', stock: 8, price: 92 },
+            { size: '9-12 شهور', color: 'أزرق سماوي', stock: 4, price: 95 },
+            { size: '0-3 شهور', color: 'وردي', stock: 0, price: 89 },
+            { size: '3-6 شهور', color: 'وردي', stock: 10, price: 93 },
+            { size: '6-9 شهور', color: 'وردي', stock: 5, price: 93 },
+            { size: '9-12 شهور', color: 'وردي', stock: 0, price: 95 }
+        ]
+    },
+    {
+        id: '1002',
+        name: 'طقم نجوم الصباح',
+        type: 'clothes',
+        brand: 'عقاد كيدز',
+        ageGroup: 'baby',
+        description: 'طقم قطعتين بخياطة لطيفة يناسب المشاوير الأولى والصور اليومية.',
+        discount: 0,
+        colors: [
+            { name: 'أبيض حليبي', hex: '#F8F4E8', images: [seedImage('photo-1516257984-b1b4d707412e', 5)] },
+            { name: 'نعناعي', hex: '#B7E4C7', images: [seedImage('photo-1516257984-b1b4d707412e', 6)] },
+            { name: 'بيج رملي', hex: '#D8C3A5', images: [seedImage('photo-1516257984-b1b4d707412e', 7)] }
+        ],
+        variants: [
+            { size: '0-3 شهور', color: 'أبيض حليبي', stock: 30, price: 96 },
+            { size: '3-6 شهور', color: 'أبيض حليبي', stock: 20, price: 96 },
+            { size: '6-9 شهور', color: 'أبيض حليبي', stock: 12, price: 99 },
+            { size: '9-12 شهور', color: 'أبيض حليبي', stock: 0, price: 102 },
+            { size: '0-3 شهور', color: 'نعناعي', stock: 14, price: 98 },
+            { size: '3-6 شهور', color: 'نعناعي', stock: 6, price: 98 },
+            { size: '6-9 شهور', color: 'نعناعي', stock: 3, price: 101 },
+            { size: '9-12 شهور', color: 'نعناعي', stock: 0, price: 104 },
+            { size: '0-3 شهور', color: 'بيج رملي', stock: 0, price: 96 },
+            { size: '3-6 شهور', color: 'بيج رملي', stock: 0, price: 96 },
+            { size: '6-9 شهور', color: 'بيج رملي', stock: 0, price: 99 },
+            { size: '9-12 شهور', color: 'بيج رملي', stock: 0, price: 102 }
+        ]
+    },
+    {
+        id: '1003',
+        name: 'فستان زهور الحديقة',
+        type: 'clothes',
+        brand: 'عقاد كيدز',
+        ageGroup: 'toddler',
+        description: 'فستان خفيف بطبقات لطيفة للزيارات والحفلات الصغيرة.',
+        discount: 12,
+        colors: [
+            { name: 'وردي بودري', hex: '#EFB7C8', images: [seedImage('photo-1515886657613-9f3515b0c78f', 8), seedImage('photo-1515886657613-9f3515b0c78f', 9)] },
+            { name: 'أبيض عاجي', hex: '#FFF8ED', images: [seedImage('photo-1515886657613-9f3515b0c78f', 10)] }
+        ],
+        variants: [
+            { size: '1-2', color: 'وردي بودري', stock: 9, price: 125 },
+            { size: '2-3', color: 'وردي بودري', stock: 7, price: 125 },
+            { size: '3-4', color: 'وردي بودري', stock: 3, price: 130 },
+            { size: '1-2', color: 'أبيض عاجي', stock: 0, price: 122 },
+            { size: '2-3', color: 'أبيض عاجي', stock: 4, price: 122 },
+            { size: '3-4', color: 'أبيض عاجي', stock: 2, price: 128 }
+        ]
+    },
+    {
+        id: '1004',
+        name: 'تيشيرت حركة مرنة',
+        type: 'clothes',
+        brand: 'عقاد كيدز',
+        ageGroup: 'kids',
+        description: 'تيشيرت يومي بقماش ناعم مناسب للعب والمدرسة والمشاوير السريعة.',
+        discount: 5,
+        colors: [
+            { name: 'أخضر مريمي', hex: '#A9C5A0', images: [seedImage('photo-1521572163474-6864f9cf17ab', 11)] },
+            { name: 'كحلي', hex: '#23395B', images: [seedImage('photo-1521572163474-6864f9cf17ab', 12)] },
+            { name: 'أصفر هادئ', hex: '#F1D97A', images: [seedImage('photo-1521572163474-6864f9cf17ab', 13)] }
+        ],
+        variants: [
+            { size: '4-5', color: 'أخضر مريمي', stock: 26, price: 72 },
+            { size: '5-6', color: 'أخضر مريمي', stock: 20, price: 72 },
+            { size: '6-7', color: 'أخضر مريمي', stock: 18, price: 75 },
+            { size: '7-8', color: 'أخضر مريمي', stock: 12, price: 75 },
+            { size: '8-9', color: 'أخضر مريمي', stock: 6, price: 78 },
+            { size: '9-10', color: 'أخضر مريمي', stock: 0, price: 78 },
+            { size: '4-5', color: 'كحلي', stock: 14, price: 72 },
+            { size: '5-6', color: 'كحلي', stock: 11, price: 72 },
+            { size: '6-7', color: 'كحلي', stock: 5, price: 76 },
+            { size: '7-8', color: 'كحلي', stock: 3, price: 76 },
+            { size: '8-9', color: 'كحلي', stock: 2, price: 80 },
+            { size: '9-10', color: 'كحلي', stock: 0, price: 80 },
+            { size: '4-5', color: 'أصفر هادئ', stock: 0, price: 74 },
+            { size: '5-6', color: 'أصفر هادئ', stock: 0, price: 74 },
+            { size: '6-7', color: 'أصفر هادئ', stock: 0, price: 77 },
+            { size: '7-8', color: 'أصفر هادئ', stock: 0, price: 77 },
+            { size: '8-9', color: 'أصفر هادئ', stock: 0, price: 81 },
+            { size: '9-10', color: 'أصفر هادئ', stock: 0, price: 81 }
+        ]
+    },
+    {
+        id: '1005',
+        name: 'هودي المدينة الهادئ',
+        type: 'clothes',
+        brand: 'عقاد كيدز',
+        ageGroup: 'teens',
+        description: 'هودي واسع بستايل عصري ولمسة دافئة تناسب الطقس المعتدل.',
+        discount: 15,
+        colors: [
+            { name: 'رمادي دخاني', hex: '#8E8E93', images: [seedImage('photo-1541099649105-f69ad21f3246', 14), seedImage('photo-1541099649105-f69ad21f3246', 15)] },
+            { name: 'موف داكن', hex: '#8A6FA8', images: [seedImage('photo-1541099649105-f69ad21f3246', 16)] }
+        ],
+        variants: [
+            { size: 'S', color: 'رمادي دخاني', stock: 16, price: 145 },
+            { size: 'M', color: 'رمادي دخاني', stock: 14, price: 145 },
+            { size: 'L', color: 'رمادي دخاني', stock: 10, price: 149 },
+            { size: 'XL', color: 'رمادي دخاني', stock: 7, price: 152 },
+            { size: 'XXL', color: 'رمادي دخاني', stock: 3, price: 156 },
+            { size: 'S', color: 'موف داكن', stock: 0, price: 147 },
+            { size: 'M', color: 'موف داكن', stock: 4, price: 147 },
+            { size: 'L', color: 'موف داكن', stock: 5, price: 151 },
+            { size: 'XL', color: 'موف داكن', stock: 2, price: 154 },
+            { size: 'XXL', color: 'موف داكن', stock: 0, price: 158 }
+        ]
+    },
+    {
+        id: '1006',
+        name: 'بنطال جوجر اللعب',
+        type: 'clothes',
+        brand: 'عقاد كيدز',
+        ageGroup: 'kids',
+        description: 'بنطال مرن بخصر مريح يناسب الحركة اليومية الطويلة.',
+        discount: 0,
+        colors: [
+            { name: 'بيج قمحي', hex: '#C9B79C', images: [seedImage('photo-1483985988355-763728e1935b', 17)] },
+            { name: 'أسود', hex: '#222222', images: [seedImage('photo-1483985988355-763728e1935b', 18)] }
+        ],
+        variants: [
+            { size: '4-5', color: 'بيج قمحي', stock: 22, price: 84 },
+            { size: '5-6', color: 'بيج قمحي', stock: 17, price: 84 },
+            { size: '6-7', color: 'بيج قمحي', stock: 10, price: 87 },
+            { size: '7-8', color: 'بيج قمحي', stock: 6, price: 87 },
+            { size: '8-9', color: 'بيج قمحي', stock: 4, price: 90 },
+            { size: '9-10', color: 'بيج قمحي', stock: 3, price: 90 },
+            { size: '4-5', color: 'أسود', stock: 12, price: 86 },
+            { size: '5-6', color: 'أسود', stock: 10, price: 86 },
+            { size: '6-7', color: 'أسود', stock: 8, price: 89 },
+            { size: '7-8', color: 'أسود', stock: 0, price: 89 },
+            { size: '8-9', color: 'أسود', stock: 0, price: 92 },
+            { size: '9-10', color: 'أسود', stock: 0, price: 92 }
+        ]
+    },
+    {
+        id: '1007',
+        name: 'سنيكر أول خطوات',
+        type: 'shoes',
+        brand: 'عقاد كيدز',
+        description: 'حذاء خفيف بقاعدة مرنة يدعم الخطوات الأولى بلطف وثبات.',
+        discount: 8,
+        colors: [
+            { name: 'أبيض عاجي', hex: '#F7F3EA', images: [seedImage('photo-1542291026-7eec264c27ff', 19)] },
+            { name: 'وردي فاتح', hex: '#F7C8D7', images: [seedImage('photo-1542291026-7eec264c27ff', 20)] }
+        ],
+        variants: [
+            { size: '20', color: 'أبيض عاجي', stock: 20, price: 118 },
+            { size: '21', color: 'أبيض عاجي', stock: 18, price: 118 },
+            { size: '22', color: 'أبيض عاجي', stock: 9, price: 122 },
+            { size: '23', color: 'أبيض عاجي', stock: 5, price: 122 },
+            { size: '24', color: 'أبيض عاجي', stock: 0, price: 126 },
+            { size: '20', color: 'وردي فاتح', stock: 0, price: 118 },
+            { size: '21', color: 'وردي فاتح', stock: 6, price: 118 },
+            { size: '22', color: 'وردي فاتح', stock: 4, price: 122 },
+            { size: '23', color: 'وردي فاتح', stock: 2, price: 122 },
+            { size: '24', color: 'وردي فاتح', stock: 0, price: 126 }
+        ]
+    },
+    {
+        id: '1008',
+        name: 'صندل صيفي مرح',
+        type: 'shoes',
+        brand: 'عقاد كيدز',
+        description: 'صندل مفتوح بخفة عالية وتثبيت مريح للمشاوير الصيفية.',
+        discount: 0,
+        colors: [
+            { name: 'كراميل', hex: '#C68642', images: [seedImage('photo-1525966222134-fcfa99b8ae77', 21)] },
+            { name: 'نعناعي', hex: '#9ADBC2', images: [seedImage('photo-1525966222134-fcfa99b8ae77', 22)] }
+        ],
+        variants: [
+            { size: '24', color: 'كراميل', stock: 24, price: 109 },
+            { size: '25', color: 'كراميل', stock: 21, price: 109 },
+            { size: '26', color: 'كراميل', stock: 14, price: 114 },
+            { size: '27', color: 'كراميل', stock: 10, price: 114 },
+            { size: '28', color: 'كراميل', stock: 6, price: 118 },
+            { size: '24', color: 'نعناعي', stock: 8, price: 109 },
+            { size: '25', color: 'نعناعي', stock: 5, price: 109 },
+            { size: '26', color: 'نعناعي', stock: 3, price: 114 },
+            { size: '27', color: 'نعناعي', stock: 0, price: 114 },
+            { size: '28', color: 'نعناعي', stock: 0, price: 118 }
+        ]
+    },
+    {
+        id: '1009',
+        name: 'حذاء مدرسة كلاسيكي',
+        type: 'shoes',
+        brand: 'عقاد كيدز',
+        description: 'حذاء يومي ثابت للمدرسة مع بطانة داخلية مريحة.',
+        discount: 6,
+        colors: [
+            { name: 'أسود', hex: '#202020', images: [seedImage('photo-1515347619252-60a4bf4fff4f', 23)] },
+            { name: 'بني', hex: '#7A5230', images: [seedImage('photo-1515347619252-60a4bf4fff4f', 24)] }
+        ],
+        variants: [
+            { size: '29', color: 'أسود', stock: 30, price: 139 },
+            { size: '30', color: 'أسود', stock: 28, price: 139 },
+            { size: '31', color: 'أسود', stock: 22, price: 144 },
+            { size: '32', color: 'أسود', stock: 16, price: 144 },
+            { size: '33', color: 'أسود', stock: 9, price: 149 },
+            { size: '34', color: 'أسود', stock: 6, price: 149 },
+            { size: '35', color: 'أسود', stock: 4, price: 154 },
+            { size: '29', color: 'بني', stock: 0, price: 141 },
+            { size: '30', color: 'بني', stock: 0, price: 141 },
+            { size: '31', color: 'بني', stock: 7, price: 146 },
+            { size: '32', color: 'بني', stock: 5, price: 146 },
+            { size: '33', color: 'بني', stock: 3, price: 151 },
+            { size: '34', color: 'بني', stock: 2, price: 151 },
+            { size: '35', color: 'بني', stock: 0, price: 156 }
+        ]
+    },
+    {
+        id: '1010',
+        name: 'بوت مطري صغير',
+        type: 'shoes',
+        brand: 'عقاد كيدز',
+        description: 'بوت مقاوم للرذاذ بتصميم مرح للأيام الباردة والممطرة.',
+        discount: 0,
+        colors: [
+            { name: 'أصفر مطري', hex: '#F7D347', images: [seedImage('photo-1543163521-1bf539c55dd2', 25)] },
+            { name: 'أزرق داكن', hex: '#2A4B7C', images: [seedImage('photo-1543163521-1bf539c55dd2', 26)] }
+        ],
+        variants: [
+            { size: '26', color: 'أصفر مطري', stock: 12, price: 132 },
+            { size: '27', color: 'أصفر مطري', stock: 9, price: 132 },
+            { size: '28', color: 'أصفر مطري', stock: 7, price: 136 },
+            { size: '29', color: 'أصفر مطري', stock: 5, price: 136 },
+            { size: '30', color: 'أصفر مطري', stock: 3, price: 139 },
+            { size: '26', color: 'أزرق داكن', stock: 0, price: 132 },
+            { size: '27', color: 'أزرق داكن', stock: 4, price: 132 },
+            { size: '28', color: 'أزرق داكن', stock: 2, price: 136 },
+            { size: '29', color: 'أزرق داكن', stock: 0, price: 136 },
+            { size: '30', color: 'أزرق داكن', stock: 0, price: 139 }
+        ]
+    },
+    {
+        id: '1011',
+        name: 'حقيبة ظهر ميني',
+        type: 'accessories',
+        subCategory: 'accessories',
+        brand: 'عقاد كيدز',
+        description: 'حقيبة صغيرة لطيفة للرحلات الخفيفة والمدرسة والنادي.',
+        discount: 0,
+        colors: [
+            { name: 'وردي باستيل', hex: '#F3C5D6', images: [seedImage('photo-1512436991641-6745cdb1723f', 27)] },
+            { name: 'بيج', hex: '#D8C7A7', images: [seedImage('photo-1512436991641-6745cdb1723f', 28)] },
+            { name: 'نعناعي', hex: '#A9D6C1', images: [seedImage('photo-1512436991641-6745cdb1723f', 29)] }
+        ],
+        variants: [
+            { size: 'واحد', color: 'وردي باستيل', stock: 14, price: 95 },
+            { size: 'واحد', color: 'بيج', stock: 6, price: 95 },
+            { size: 'واحد', color: 'نعناعي', stock: 0, price: 95 }
+        ]
+    },
+    {
+        id: '1012',
+        name: 'قبعة شمس ناعمة',
+        type: 'accessories',
+        subCategory: 'accessories',
+        brand: 'عقاد كيدز',
+        description: 'قبعة قطنية بستايل مرح تحمي من الشمس وتكمل الإطلالة.',
+        discount: 5,
+        colors: [
+            { name: 'سكري', hex: '#F6E7C1', images: [seedImage('photo-1521369909029-2afed882baee', 30)] },
+            { name: 'وردي', hex: '#F2B9C6', images: [seedImage('photo-1521369909029-2afed882baee', 31)] }
+        ],
+        variants: [
+            { size: 'واحد', color: 'سكري', stock: 18, price: 39 },
+            { size: 'واحد', color: 'وردي', stock: 3, price: 39 }
+        ]
+    },
+    {
+        id: '1013',
+        name: 'طقم ربطات شعر',
+        type: 'accessories',
+        subCategory: 'accessories',
+        brand: 'عقاد كيدز',
+        description: 'مجموعة رباطات شعر ناعمة بألوان محببة للاستخدام اليومي.',
+        discount: 0,
+        colors: [
+            { name: 'متعدد الألوان', hex: '#CFA6F7', images: [seedImage('photo-1630019852942-f89202989a59', 32)] },
+            { name: 'خوخي', hex: '#F6B38C', images: [seedImage('photo-1630019852942-f89202989a59', 33)] }
+        ],
+        variants: [
+            { size: 'واحد', color: 'متعدد الألوان', stock: 32, price: 28 },
+            { size: 'واحد', color: 'خوخي', stock: 5, price: 28 }
+        ]
+    },
+    {
+        id: '1014',
+        name: 'كريم ترطيب يومي',
+        type: 'creams',
+        subCategory: 'creams',
+        brand: 'عقاد كيدز',
+        description: 'كريم لطيف للبشرة الحساسة بملمس خفيف مناسب للاستخدام اليومي.',
+        discount: 0,
+        colors: [
+            { name: 'الافتراضي', hex: '#F4D7DA', images: [seedImage('photo-1556228578-8c89e6adf883', 34)] }
+        ],
+        variants: [
+            { size: '100 مل', color: 'الافتراضي', stock: 40, price: 36 }
+        ]
+    },
+    {
+        id: '1015',
+        name: 'عطر قطن خفيف',
+        type: 'creams',
+        subCategory: 'perfumes',
+        brand: 'عقاد كيدز',
+        description: 'عطر أطفال خفيف برائحة نظيفة ولمسة قطنية مريحة.',
+        discount: 10,
+        colors: [
+            { name: 'الافتراضي', hex: '#E6E0F8', images: [seedImage('photo-1541643600914-78b084683601', 35)] }
+        ],
+        variants: [
+            { size: '50 مل', color: 'الافتراضي', stock: 12, price: 52 }
+        ]
+    },
+    {
+        id: '1016',
+        name: 'لوشن استحمام الأطفال',
+        type: 'creams',
+        subCategory: 'creams',
+        brand: 'عقاد كيدز',
+        description: 'لوشن استحمام برائحة ناعمة يساعد على ترطيب البشرة بعد الاستحمام.',
+        discount: 0,
+        colors: [
+            { name: 'الافتراضي', hex: '#DDECF4', images: [seedImage('photo-1620916566398-39f1143ab7be', 36)] }
+        ],
+        variants: [
+            { size: '200 مل', color: 'الافتراضي', stock: 0, price: 44 }
+        ]
+    }
 ];
 
 var SEED_DISCOUNTS = [
-    { id: 'aq-summer-shoes', title: 'عرض الأحذية الصيفية', type: 'type', values: ['shoes'], percentage: 8, description: 'خصم موسمي على مجموعة الأحذية المختارة', expiresAt: '' },
-    { id: 'aq-zara-stars', title: 'مفاجأة Zara Kids', type: 'brand', values: ['Zara Kids'], percentage: 12, description: 'خصم لطيف على قطع Zara Kids المفضلة', expiresAt: '' }
+    { id: 'summer-shoes', title: 'عرض الأحذية المختارة', type: 'type', values: ['shoes'], percentage: 8, description: 'خصم موسمي على بعض الأحذية.', expiresAt: '' },
+    { id: 'aqqad-brand', title: 'مفاجأة عقاد كيدز', type: 'brand', values: ['عقاد كيدز'], percentage: 5, description: 'خصم إضافي على تشكيلة عقاد كيدز.', expiresAt: '' }
 ];
 
 function getSeedUsers() {
@@ -74,4 +411,3 @@ function seedFirestoreData(force) {
         });
     });
 }
-

@@ -253,6 +253,18 @@ th { color: var(--muted); font-size: 0.9rem; }
     background: rgba(255,255,255,0.7);
     border: 1px solid var(--line);
 }
+.token-list { display: flex; flex-wrap: wrap; gap: 10px; }
+.token-chip { display: inline-flex; align-items: center; gap: 8px; padding: 10px 14px; border-radius: 999px; background: rgba(255,255,255,0.88); border: 1px solid var(--line); font-weight: 700; }
+.token-chip button { border: none; background: none; color: #b0304b; font-weight: 900; padding: 0; }
+.color-editor-row { display: grid; grid-template-columns: 1fr 120px minmax(0, 1.2fr) auto; gap: 12px; align-items: start; padding: 14px; border-radius: 20px; background: rgba(255,255,255,0.78); border: 1px solid var(--line); }
+.color-editor-row .color-preview { width: 28px; height: 28px; border-radius: 50%; border: 1px solid rgba(0,0,0,0.12); }
+.color-row-tools { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+.mini-help { font-size: 0.8rem; color: var(--muted); }
+.variant-grid-table { width: 100%; min-width: 680px; }
+.variant-grid-table td { min-width: 170px; }
+.variant-cell { display: grid; gap: 8px; }
+.variant-cell label { display: grid; gap: 4px; font-size: 0.8rem; color: var(--muted); }
+.variant-cell input { padding: 0.75rem 0.9rem; }
 .modal {
     position: fixed;
     inset: 0;
@@ -294,5 +306,6 @@ th { color: var(--muted); font-size: 0.9rem; }
     .admin-app { padding: 12px; }
     .toolbar { flex-wrap: wrap; }
     .hero-slide-item,
-    .delivery-row { grid-template-columns: 1fr; }
+    .delivery-row,
+    .color-editor-row { grid-template-columns: 1fr; }
 }

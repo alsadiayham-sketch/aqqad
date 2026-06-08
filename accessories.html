@@ -27,6 +27,7 @@
                 <div class="filter-shell glass-card" data-animate>
                     <div class="filter-grid">
                         <label>الفئة الفرعية<select id="subCategoryFilter"><option value="">الكل</option><option value="accessories">إكسسوارات</option><option value="creams">كريمات</option><option value="perfumes">عطور</option></select></label>
+                        <label>اللون<select id="accColorFilter"><option value="">كل الألوان</option></select></label>
                         <label>البراند<select id="accBrandFilter"><option value="">كل البراندات</option></select></label>
                         <label>بحث سريع<input id="accSearchFilter" type="text" placeholder="ابحثي بالاسم أو الوصف"></label>
                     </div>
@@ -44,7 +45,7 @@
     <script src="data.js"></script>
     <script src="shared.js"></script>
     <script>
-        var accFilters = { subCategory: '', brand: '', search: '' };
+        var accFilters = { subCategory: '', color: '', brand: '', search: '' };
         document.addEventListener('DOMContentLoaded', function () {
             AqqadStore.init({ activePage: 'accessories', navSubtitle: 'إكسسوارات وعناية بروح لطيفة' });
             AqqadStore.onReady(function () {
@@ -57,24 +58,38 @@
             if (document.body.getAttribute('data-acc-bound') === '1') return;
             document.body.setAttribute('data-acc-bound', '1');
             document.getElementById('subCategoryFilter').addEventListener('change', function (event) { accFilters.subCategory = event.target.value; renderAccCatalog(); });
+            document.getElementById('accColorFilter').addEventListener('change', function (event) { accFilters.color = event.target.value; renderAccCatalog(); });
             document.getElementById('accBrandFilter').addEventListener('change', function (event) { accFilters.brand = event.target.value; renderAccCatalog(); });
             document.getElementById('accSearchFilter').addEventListener('input', function (event) { accFilters.search = normalizeSearchText(event.target.value); renderAccCatalog(); });
         }
         function renderAccFilters() {
             var products = AqqadStore.getProductsByType('accessories-page');
             var brands = {};
+            var colors = {};
             for (var i = 0; i < products.length; i += 1) brands[products[i].brand] = true;
+            for (var j = 0; j < products.length; j += 1) {
+                for (var k = 0; k < products[j].colors.length; k += 1) colors[products[j].colors[k].name] = true;
+            }
+            document.getElementById('accColorFilter').innerHTML = '<option value="">كل الألوان</option>' + Object.keys(colors).sort().map(function (color) { return '<option value="' + escapeHtml(color) + '">' + escapeHtml(color) + '</option>'; }).join('');
             document.getElementById('accBrandFilter').innerHTML = '<option value="">كل البراندات</option>' + Object.keys(brands).sort().map(function (brand) { return '<option value="' + escapeHtml(brand) + '">' + escapeHtml(brand) + '</option>'; }).join('');
             document.getElementById('subCategoryFilter').value = accFilters.subCategory;
+            document.getElementById('accColorFilter').value = accFilters.color;
             document.getElementById('accBrandFilter').value = accFilters.brand;
         }
         function renderAccCatalog() {
             var products = AqqadStore.getProductsByType('accessories-page').filter(function (product) {
                 var matchesSub = !accFilters.subCategory || product.subCategory === accFilters.subCategory;
+                var matchesColor = !accFilters.color || product.colors.some(function (color) { return color.name === accFilters.color; });
                 var matchesBrand = !accFilters.brand || product.brand === accFilters.brand;
                 var text = normalizeSearchText([product.name, product.brand, product.description].join(' '));
                 var matchesSearch = !accFilters.search || text.indexOf(accFilters.search) >= 0;
-                return matchesSub && matchesBrand && matchesSearch;
+                return matchesSub && matchesColor && matchesBrand && matchesSearch;
+            }).sort(function (a, b) {
+                if (a.status !== b.status) {
+                    if (a.status === 'soldout') return 1;
+                    if (b.status === 'soldout') return -1;
+                }
+                return a.name.localeCompare(b.name, 'ar');
             });
             document.getElementById('accResultsCount').textContent = products.length + ' قطعة';
             document.getElementById('accCatalogGrid').innerHTML = products.map(function (product) { return AqqadStore.renderProductCard(product); }).join('');
@@ -84,4 +99,3 @@
     </script>
 </body>
 </html>
-

@@ -25,7 +25,30 @@ function bindHomeEvents() {
             result.innerHTML = 'جاري البحث عن طلبك...';
             result.classList.remove('hidden');
             AqqadStore.trackOrder(input.value, function (order) {
-                result.innerHTML = '<strong>رقم الطلب: ' + escapeHtml(order.orderNumber || '') + '</strong><div>الحالة الحالية: ' + escapeHtml(getOrderStatusLabel(order.status || 'new')) + '</div><div>آخر تحديث: ' + escapeHtml(formatDateTime(order.updatedAt || order.updatedAtIso || order.createdAt || order.createdAtIso)) + '</div><div>الإجمالي: ' + escapeHtml(order.totalFormatted || formatCurrency(order.totalBase || 0, order.region || 'palestine', AqqadStore.state.settings)) + '</div>';
+                var statusSteps = ['new', 'preparing', 'prepared', 'in_delivery', 'completed'];
+                var statusLabels = ['قيد الانتظار', 'جاري التحضير', 'جاهز للشحن', 'في الطريق', 'تم التوصيل'];
+                var currentIdx = statusSteps.indexOf(order.status || 'new');
+                if (currentIdx < 0) currentIdx = 0;
+                var stepsHtml = statusSteps.map(function (step, idx) {
+                    var cls = idx <= currentIdx ? 'step-active' : '';
+                    return '<div class="track-step ' + cls + '"><div class="step-dot">' + (idx <= currentIdx ? '✓' : (idx + 1)) + '</div><span>' + statusLabels[idx] + '</span></div>';
+                }).join('');
+                var itemsHtml = '';
+                if (order.items && order.items.length) {
+                    itemsHtml = '<div class="track-items">';
+                    for (var i = 0; i < order.items.length; i++) {
+                        var item = order.items[i];
+                        var priceDisplay = item.unitPriceBase ? formatCurrency(item.unitPriceBase, order.region || 'palestine', AqqadStore.state.settings) : '';
+                        itemsHtml += '<div class="track-item"><img src="' + escapeHtml(item.image || '') + '" onerror="this.style.display=\'none\'"><div><strong>' + escapeHtml(item.name || '') + '</strong><div style="color:var(--muted);font-size:0.82rem">' + escapeHtml(item.size || '') + (item.color ? ' • ' + escapeHtml(item.color) : '') + ' × ' + item.qty + (priceDisplay ? ' • ' + priceDisplay : '') + '</div></div></div>';
+                    }
+                    itemsHtml += '</div>';
+                }
+                var spinClass = (order.status === 'new' || order.status === 'preparing') ? ' spinning' : '';
+                result.innerHTML = ''
+                    + '<div class="track-header"><span class="track-icon' + spinClass + '">⏳</span><strong>رقم الطلب: ' + escapeHtml(order.orderNumber || '') + '</strong></div>'
+                    + '<div class="track-steps">' + stepsHtml + '</div>'
+                    + '<div class="track-info"><div><span>طريقة الدفع</span><strong>' + escapeHtml(order.paymentLabel || getPaymentMethodLabel(order.paymentMethod || 'cod')) + '</strong></div><div><span>المنطقة</span><strong>' + escapeHtml(order.regionLabel || getRegionLabel(order.region || 'palestine')) + '</strong></div><div><span>الإجمالي</span><strong>' + escapeHtml(order.totalFormatted || formatCurrency(order.totalBase || 0, order.region || 'palestine', AqqadStore.state.settings)) + '</strong></div></div>'
+                    + itemsHtml;
             }, function (message) {
                 result.innerHTML = '<strong>' + escapeHtml(message) + '</strong><div>إذا احتجتِ مساعدة أسرع راسلينا عبر الواتساب.</div>';
             });

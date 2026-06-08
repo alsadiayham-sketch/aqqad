@@ -27,6 +27,7 @@
                 <div class="filter-shell glass-card" data-animate>
                     <div class="filter-grid">
                         <label>المقاس<select id="shoeSizeFilter"><option value="">كل المقاسات</option></select></label>
+                        <label>اللون<select id="shoeColorFilter"><option value="">كل الألوان</option></select></label>
                         <label>البراند<select id="shoeBrandFilter"><option value="">كل البراندات</option></select></label>
                         <label>بحث سريع<input id="shoeSearchFilter" type="text" placeholder="ابحثي بالاسم أو البراند"></label>
                     </div>
@@ -44,7 +45,7 @@
     <script src="data.js"></script>
     <script src="shared.js"></script>
     <script>
-        var shoeFilters = { size: '', brand: '', search: '' };
+        var shoeFilters = { size: '', color: '', brand: '', search: '' };
         document.addEventListener('DOMContentLoaded', function () {
             AqqadStore.init({ activePage: 'shoes', navSubtitle: 'أحذية مرنة لكل حركة' });
             AqqadStore.onReady(function () {
@@ -57,25 +58,39 @@
             if (document.body.getAttribute('data-shoes-bound') === '1') return;
             document.body.setAttribute('data-shoes-bound', '1');
             document.getElementById('shoeSizeFilter').addEventListener('change', function (event) { shoeFilters.size = event.target.value; renderShoesCatalog(); });
+            document.getElementById('shoeColorFilter').addEventListener('change', function (event) { shoeFilters.color = event.target.value; renderShoesCatalog(); });
             document.getElementById('shoeBrandFilter').addEventListener('change', function (event) { shoeFilters.brand = event.target.value; renderShoesCatalog(); });
             document.getElementById('shoeSearchFilter').addEventListener('input', function (event) { shoeFilters.search = normalizeSearchText(event.target.value); renderShoesCatalog(); });
         }
         function renderShoesFilters() {
             var products = AqqadStore.getProductsByType('shoes');
+            var colors = {};
             document.getElementById('shoeSizeFilter').innerHTML = '<option value="">كل المقاسات</option>' + SHOE_SIZES.map(function (size) { return '<option value="' + size + '">' + size + '</option>'; }).join('');
             var brands = {};
             for (var i = 0; i < products.length; i += 1) brands[products[i].brand] = true;
+            for (var j = 0; j < products.length; j += 1) {
+                for (var k = 0; k < products[j].colors.length; k += 1) colors[products[j].colors[k].name] = true;
+            }
+            document.getElementById('shoeColorFilter').innerHTML = '<option value="">كل الألوان</option>' + Object.keys(colors).sort().map(function (color) { return '<option value="' + escapeHtml(color) + '">' + escapeHtml(color) + '</option>'; }).join('');
             document.getElementById('shoeBrandFilter').innerHTML = '<option value="">كل البراندات</option>' + Object.keys(brands).sort().map(function (brand) { return '<option value="' + escapeHtml(brand) + '">' + escapeHtml(brand) + '</option>'; }).join('');
             document.getElementById('shoeSizeFilter').value = shoeFilters.size;
+            document.getElementById('shoeColorFilter').value = shoeFilters.color;
             document.getElementById('shoeBrandFilter').value = shoeFilters.brand;
         }
         function renderShoesCatalog() {
             var products = AqqadStore.getProductsByType('shoes').filter(function (product) {
-                var matchesSize = !shoeFilters.size || product.sizes.some(function (size) { return size.label === shoeFilters.size; });
+                var matchesSize = !shoeFilters.size || getProductSizeLabels(product).indexOf(shoeFilters.size) >= 0;
+                var matchesColor = !shoeFilters.color || product.colors.some(function (color) { return color.name === shoeFilters.color; });
                 var matchesBrand = !shoeFilters.brand || product.brand === shoeFilters.brand;
                 var text = normalizeSearchText([product.name, product.brand, product.description].join(' '));
                 var matchesSearch = !shoeFilters.search || text.indexOf(shoeFilters.search) >= 0;
-                return matchesSize && matchesBrand && matchesSearch;
+                return matchesSize && matchesColor && matchesBrand && matchesSearch;
+            }).sort(function (a, b) {
+                if (a.status !== b.status) {
+                    if (a.status === 'soldout') return 1;
+                    if (b.status === 'soldout') return -1;
+                }
+                return a.name.localeCompare(b.name, 'ar');
             });
             document.getElementById('shoeResultsCount').textContent = products.length + ' زوج';
             document.getElementById('shoeCatalogGrid').innerHTML = products.map(function (product) { return AqqadStore.renderProductCard(product); }).join('');
@@ -85,4 +100,3 @@
     </script>
 </body>
 </html>
-
