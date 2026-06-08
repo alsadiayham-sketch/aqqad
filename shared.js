@@ -177,6 +177,11 @@
                 openProductModal(openButton.getAttribute('data-open-product'));
                 return;
             }
+            var cardEl = target.closest ? target.closest('.product-card') : null;
+            if (cardEl && !target.closest('.product-actions')) {
+                var cardBtn = cardEl.querySelector('[data-open-product]');
+                if (cardBtn) { openProductModal(cardBtn.getAttribute('data-open-product')); return; }
+            }
             var removeButton = findNodeWithAttribute(target, 'data-remove-cart');
             if (removeButton) {
                 removeCartLine(removeButton.getAttribute('data-remove-cart'), removeButton.getAttribute('data-size'), removeButton.getAttribute('data-color'));

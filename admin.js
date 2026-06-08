@@ -261,8 +261,8 @@ function renderProductsTable() {
     var tbody = document.getElementById('productsTableBody');
     tbody.innerHTML = adminState.products.map(function (product) {
         var firstVariant = getDefaultVariant(product) || (product.variants[0] || { price: 0 });
-        return '<tr><td>' + escapeHtml(product.name) + '</td><td>' + escapeHtml(getTypeLabel(product.type)) + '</td><td>' + escapeHtml(getAgeGroupLabel(product.ageGroup)) + '</td><td>' + escapeHtml(product.brand) + '</td><td>' + formatCurrency(firstVariant.price || 0, 'palestine', adminState.settings) + '</td><td>' + getTotalStock(product) + '</td><td>' + escapeHtml(getProductStatusLabel(product.status)) + '</td><td><button class="action-link" onclick="editProduct(\'' + product.id + '\')">تعديل</button><button class="action-link" onclick="deleteProduct(\'' + product.id + '\')">حذف</button></td></tr>';
-    }).join('') || '<tr><td colspan="8">لا توجد منتجات حالياً.</td></tr>';
+        return '<tr><td><img src="' + escapeHtml(product.image || FALLBACK_IMAGE) + '" style="width:42px;height:42px;object-fit:cover;border-radius:8px;vertical-align:middle" onerror="this.src=\'' + FALLBACK_IMAGE + '\'"></td><td>' + escapeHtml(product.name) + '</td><td>' + escapeHtml(getTypeLabel(product.type)) + '</td><td>' + escapeHtml(getAgeGroupLabel(product.ageGroup)) + '</td><td>' + escapeHtml(product.brand) + '</td><td>' + formatCurrency(firstVariant.price || 0, 'palestine', adminState.settings) + '</td><td>' + getTotalStock(product) + '</td><td>' + escapeHtml(getProductStatusLabel(product.status)) + '</td><td><button class="action-link" onclick="editProduct(\'' + product.id + '\')">تعديل</button><button class="action-link" onclick="deleteProduct(\'' + product.id + '\')">حذف</button></td></tr>';
+    }).join('') || '<tr><td colspan="9">لا توجد منتجات حالياً.</td></tr>';
 }
 
 function createDraftVariantMatrix(sizeLabels, colors, existingVariants) {
