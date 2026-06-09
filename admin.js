@@ -528,9 +528,17 @@ function saveProduct(event) {
         if (originalId && originalId !== payload.id) return db.collection('products').doc(originalId).delete();
         return null;
     }).then(function () {
+        saveBtn.disabled = false;
+        saveBtn.textContent = 'حفظ المنتج';
         closeModal('productModal');
         setAdminStatus('تم حفظ المنتج.', 'success');
-    }).catch(function () { setAdminStatus('تعذر حفظ المنتج.', 'error'); });
+    }).catch(function () {
+        saveBtn.disabled = false;
+        saveBtn.textContent = 'حفظ المنتج';
+        setAdminStatus('تعذر حفظ المنتج.', 'error');
+    });
+    var saveBtn = document.querySelector('#productForm [type="submit"]');
+    if (saveBtn) { saveBtn.disabled = true; saveBtn.textContent = 'جاري الحفظ...'; }
 }
 
 function deleteProduct(productId) {
@@ -812,6 +820,8 @@ function updateOrderStatus(docId, status) {
 }
 
 function exportProductsCsv() {
+    var btn = document.getElementById('exportProductsBtn');
+    if (btn) { btn.disabled = true; btn.textContent = 'جاري التصدير...'; }
     var rows = [];
     adminState.products.forEach(function (product) {
         product.variants.forEach(function (variant) {
@@ -837,9 +847,12 @@ function exportProductsCsv() {
         });
     });
     downloadCsv('aqqad-products.csv', rows);
+    setTimeout(function () { if (btn) { btn.disabled = false; btn.textContent = 'تصدير CSV'; } }, 500);
 }
 
 function exportOrders() {
+    var btn = document.getElementById('exportOrdersBtn');
+    if (btn) { btn.disabled = true; btn.textContent = 'جاري التصدير...'; }
     var rows = getFilteredOrders().map(function (order) {
         return {
             orderId: order.orderNumber,
@@ -859,9 +872,11 @@ function exportOrders() {
         var workbook = XLSX.utils.book_new();
         XLSX.utils.book_append_sheet(workbook, sheet, 'Orders');
         XLSX.writeFile(workbook, 'aqqad-orders.xlsx');
+        setTimeout(function () { if (btn) { btn.disabled = false; btn.textContent = 'تصدير الطلبات'; } }, 500);
         return;
     }
     downloadCsv('aqqad-orders.csv', rows);
+    setTimeout(function () { if (btn) { btn.disabled = false; btn.textContent = 'تصدير الطلبات'; } }, 500);
 }
 
 function downloadCsv(fileName, rows) {
@@ -972,6 +987,8 @@ function convertRowsToProducts(rows) {
 }
 
 function importProducts(list, mode) {
+    var btn = document.getElementById('importProductsBtn');
+    if (btn) { btn.disabled = true; btn.textContent = 'جاري الاستيراد...'; }
     var run = Promise.resolve();
     if (mode === 'replace') run = clearCollection('products');
     run.then(function () {
@@ -979,7 +996,11 @@ function importProducts(list, mode) {
         list.forEach(function (product) { batch.set(db.collection('products').doc(product.id), product); });
         return batch.commit();
     }).then(function () {
+        if (btn) { btn.disabled = false; btn.textContent = 'استيراد ملف'; }
         setAdminStatus('تم استيراد المنتجات.', 'success');
         document.getElementById('importProductsFile').value = '';
-    }).catch(function () { setAdminStatus('تعذر استيراد المنتجات.', 'error'); });
+    }).catch(function () {
+        if (btn) { btn.disabled = false; btn.textContent = 'استيراد ملف'; }
+        setAdminStatus('تعذر استيراد المنتجات.', 'error');
+    });
 }
