@@ -423,16 +423,18 @@ function handleProductDraftInput(event) {
     if (target.getAttribute('data-color-name') != null) {
         var colorIndex = parseInt(target.getAttribute('data-color-name'), 10) || 0;
         var oldName = adminState.productDraft.colors[colorIndex].name;
-        var newName = String(target.value || '').trim() || 'لون';
-        adminState.productDraft.colors[colorIndex].name = newName;
+        var newName = String(target.value || '');
+        adminState.productDraft.colors[colorIndex].name = newName || 'لون';
         for (var i = 0; i < adminState.productDraft.variants.length; i += 1) {
-            if (adminState.productDraft.variants[i].color === oldName) adminState.productDraft.variants[i].color = newName;
+            if (adminState.productDraft.variants[i].color === oldName) adminState.productDraft.variants[i].color = newName || 'لون';
         }
-        renderProductDraftSections();
+        renderDraftVariantsGrid();
     }
     if (target.getAttribute('data-color-hex') != null) {
-        adminState.productDraft.colors[parseInt(target.getAttribute('data-color-hex'), 10) || 0].hex = String(target.value || '#d9d9d9');
-        renderProductDraftSections();
+        var hexIndex = parseInt(target.getAttribute('data-color-hex'), 10) || 0;
+        adminState.productDraft.colors[hexIndex].hex = String(target.value || '#d9d9d9');
+        var previewEl = target.parentNode && target.parentNode.querySelector('.color-preview');
+        if (previewEl) previewEl.style.background = target.value;
     }
     if (target.getAttribute('data-color-images') != null) {
         adminState.productDraft.colors[parseInt(target.getAttribute('data-color-images'), 10) || 0].images = String(target.value || '').split(/[\n,]/).map(function (item) { return String(item || '').trim(); }).filter(Boolean);
@@ -443,6 +445,14 @@ function handleProductDraftInput(event) {
 
 function handleProductDraftChange(event) {
     var target = event.target;
+    if (target.id === 'productImageFile' && target.files && target.files.length) {
+        readFileAsDataUrl(target.files[0]).then(function (result) {
+            document.getElementById('productImage').value = result.data;
+            var preview = document.getElementById('productImagePreview');
+            if (preview) preview.textContent = '✓ تم رفع الصورة (' + target.files[0].name + ')';
+        });
+        return;
+    }
     if (target.getAttribute('data-color-files') != null && target.files && target.files.length) {
         var index = parseInt(target.getAttribute('data-color-files'), 10) || 0;
         var tasks = [];
