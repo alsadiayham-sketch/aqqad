@@ -33,11 +33,6 @@ function bindAdminEvents() {
     document.getElementById('loginForm').addEventListener('submit', handleLogin);
     document.getElementById('logoutBtn').addEventListener('click', logoutAdmin);
     document.getElementById('refreshBtn').addEventListener('click', initializeAdmin);
-    document.getElementById('seedDataBtn').addEventListener('click', function () {
-        if (!window.db) return;
-        setAdminStatus('جاري زرع البيانات...', '');
-        seedFirestoreData(true).then(function () { setAdminStatus('تم زرع البيانات بنجاح.', 'success'); }).catch(function () { setAdminStatus('تعذر زرع البيانات.', 'error'); });
-    });
     document.getElementById('newProductBtn').addEventListener('click', function () { openProductModal(); });
     document.getElementById('productForm').addEventListener('submit', saveProduct);
     document.getElementById('addSizeBtn').addEventListener('click', addDraftSizeFromInput);
@@ -146,7 +141,6 @@ function applyRolePermissions() {
         var tab = buttons[i].getAttribute('data-tab');
         buttons[i].style.display = isWorker && hiddenTabs.indexOf(tab) >= 0 ? 'none' : '';
     }
-    document.getElementById('seedDataBtn').style.display = isWorker ? 'none' : '';
     if (isWorker) switchTab('orders');
 }
 
@@ -179,11 +173,6 @@ function ensureDefaults() {
     }).then(function (heroDoc) {
         if (!heroDoc.exists) return db.collection('settings').doc('heroSlides').set(normalizeHeroSlidesDoc(getDefaultHeroSlidesDoc()));
         return null;
-    }).then(function () {
-        return db.collection('products').limit(1).get();
-    }).then(function (snapshot) {
-        if (snapshot.empty) return seedFirestoreData(false);
-        return false;
     });
 }
 
