@@ -207,6 +207,15 @@ function subscribeData() {
         adminState.heroSlides = normalizeHeroSlidesDoc(docSnap.exists ? docSnap.data() : getDefaultHeroSlidesDoc()).slides;
         renderHeroSlides();
     });
+    // POS users and logs
+    db.collection('settings').doc('pos_users').onSnapshot(function (docSnap) {
+        adminState.posUsers = docSnap.exists ? (docSnap.data().users || []) : [];
+        renderPosUsersTable();
+    });
+    db.collection('pos_logs').orderBy('timestamp', 'desc').limit(100).onSnapshot(function (snapshot) {
+        adminState.posLogs = snapshot.docs.map(function (d) { var data = d.data(); data.id = d.id; return data; });
+        renderPosLogsTable();
+    });
 }
 
 function renderDashboard() {
@@ -993,3 +1002,88 @@ function importProducts(list, mode) {
         setAdminStatus('تعذر استيراد المنتجات.', 'error');
     });
 }
+
+// ============ POS USERS & LOGS ============
+function renderPosUsersTable() {
+    var body = document.getElementById('posUsersBody');
+    if (!body) return;
+    var users = adminState.posUsers || [];
+    var html = '';
+    for (var i = 0; i < users.length; i++) {
+        var u = users[i];
+        var statusLabel = u.active !== false ? 'نشط' : 'معطل';
+        var toggleLabel = u.active !== false ? 'تعطيل' : 'تفعيل';
+        html += '<tr>';
+        html += '<td>' + (u.username || '') + '</td>';
+        html += '<td>' + (u.displayName || '') + '</td>';
+        html += '<td>' + (u.role === 'admin' ? 'مدير' : 'كاشير') + '</td>';
+        html += '<td>' + statusLabel + '</td>';
+        html += '<td><button class="action-link" onclick="togglePosUser(' + i + ')">' + toggleLabel + '</button> <button class="action-link danger" onclick="removePosUser(' + i + ')">حذف</button></td>';
+        html += '</tr>';
+    }
+    body.innerHTML = html || '<tr><td colspan="5" style="text-align:center;">لا يوجد مستخدمون</td></tr>';
+}
+
+function renderPosLogsTable() {
+    var body = document.getElementById('posLogsBody');
+    if (!body) return;
+    var logs = adminState.posLogs || [];
+    var html = '';
+    for (var i = 0; i < logs.length; i++) {
+        var l = logs[i];
+        var date = l.timestamp && l.timestamp.toDate ? l.timestamp.toDate().toLocaleString('ar-EG') : '';
+        html += '<tr>';
+        html += '<td>' + date + '</td>';
+        html += '<td>' + (l.user || '') + '</td>';
+        html += '<td>' + (l.type || '') + '</td>';
+        html += '<td>' + (l.description || '') + '</td>';
+        html += '</tr>';
+    }
+    body.innerHTML = html || '<tr><td colspan="4" style="text-align:center;">لا توجد سجلات</td></tr>';
+}
+
+function savePosUser(e) {
+    e.preventDefault();
+    var username = document.getElementById('posUserUsername').value.trim();
+    var displayName = document.getElementById('posUserName').value.trim();
+    var password = document.getElementById('posUserPassword').value;
+    var role = document.getElementById('posUserRole').value;
+    if (!username || !password || !displayName) { setAdminStatus('يرجى ملء جميع الحقول', 'error'); return; }
+
+    var users = (adminState.posUsers || []).slice();
+    var existing = users.findIndex(function (u) { return u.username === username; });
+    if (existing >= 0) {
+        users[existing] = { username: username, displayName: displayName, password: password, role: role, active: true };
+    } else {
+        users.push({ username: username, displayName: displayName, password: password, role: role, active: true });
+    }
+
+    db.collection('settings').doc('pos_users').set({ users: users }).then(function () {
+        setAdminStatus('تم حفظ مستخدم POS', 'success');
+        document.getElementById('posUserForm').reset();
+    });
+}
+
+function togglePosUser(index) {
+    var users = (adminState.posUsers || []).slice();
+    if (!users[index]) return;
+    users[index].active = users[index].active === false ? true : false;
+    db.collection('settings').doc('pos_users').set({ users: users });
+}
+
+function removePosUser(index) {
+    if (!confirm('هل أنت متأكد من حذف هذا المستخدم؟')) return;
+    var users = (adminState.posUsers || []).slice();
+    users.splice(index, 1);
+    db.collection('settings').doc('pos_users').set({ users: users });
+}
+
+// Expose POS functions globally
+window.togglePosUser = togglePosUser;
+window.removePosUser = removePosUser;
+
+// Attach POS user form
+document.addEventListener('DOMContentLoaded', function () {
+    var posForm = document.getElementById('posUserForm');
+    if (posForm) posForm.addEventListener('submit', savePosUser);
+});

@@ -46,6 +46,7 @@
                 <button class="tab-btn" data-tab="settings">الإعدادات</button>
                 <button class="tab-btn" data-tab="hero">شرائح الواجهة</button>
                 <button class="tab-btn" data-tab="users">الموظفون</button>
+                <button class="tab-btn" data-tab="pos">نقطة البيع</button>
             </div>
             <button class="ghost-btn full-width" id="logoutBtn" type="button">تسجيل الخروج</button>
         </aside>
@@ -177,6 +178,28 @@
                     <div class="panel-card stack">
                         <h3>الموظفون الحاليون</h3>
                         <div class="table-wrap"><table><thead><tr><th>اسم المستخدم</th><th>الاسم</th><th>الدور</th><th>إجراء</th></tr></thead><tbody id="usersTableBody"></tbody></table></div>
+                    </div>
+                </div>
+            </section>
+
+            <section class="tab-panel" id="tab-pos">
+                <div class="panel-card stack">
+                    <h3>إدارة مستخدمي نقطة البيع</h3>
+                    <form id="posUserForm" class="admin-form stack" style="max-width:400px;">
+                        <input id="posUserUsername" type="text" placeholder="اسم المستخدم">
+                        <input id="posUserName" type="text" placeholder="الاسم الظاهر">
+                        <input id="posUserPassword" type="text" placeholder="كلمة المرور">
+                        <select id="posUserRole"><option value="worker">كاشير</option><option value="admin">مدير</option></select>
+                        <button class="primary-btn" type="submit">إضافة مستخدم POS</button>
+                    </form>
+                    <div class="table-wrap" style="margin-top:16px;">
+                        <table><thead><tr><th>اسم المستخدم</th><th>الاسم</th><th>الدور</th><th>الحالة</th><th>إجراء</th></tr></thead><tbody id="posUsersBody"></tbody></table>
+                    </div>
+                </div>
+                <div class="panel-card stack" style="margin-top:20px;">
+                    <h3>سجل النشاطات (POS)</h3>
+                    <div class="table-wrap" style="max-height:400px;overflow-y:auto;">
+                        <table><thead><tr><th>التاريخ</th><th>المستخدم</th><th>النوع</th><th>الوصف</th></tr></thead><tbody id="posLogsBody"></tbody></table>
                     </div>
                 </div>
             </section>
