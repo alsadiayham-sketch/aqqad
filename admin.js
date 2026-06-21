@@ -49,6 +49,7 @@ function bindAdminEvents() {
     document.getElementById('orderSearchInput').addEventListener('input', debounce(renderOrdersTable, 250));
     document.getElementById('orderStatusFilter').addEventListener('change', renderOrdersTable);
     document.getElementById('orderRegionFilter').addEventListener('change', renderOrdersTable);
+    document.getElementById('orderSourceFilter').addEventListener('change', renderOrdersTable);
     document.getElementById('orderDateFrom').addEventListener('change', renderOrdersTable);
     document.getElementById('orderDateTo').addEventListener('change', renderOrdersTable);
     document.getElementById('heroSlidesUploader').addEventListener('change', uploadHeroFiles);
@@ -789,6 +790,7 @@ function getFilteredOrders() {
     var term = normalizeSearchText(document.getElementById('orderSearchInput').value || '');
     var status = document.getElementById('orderStatusFilter').value;
     var region = document.getElementById('orderRegionFilter').value;
+    var source = document.getElementById('orderSourceFilter').value;
     var from = document.getElementById('orderDateFrom').value;
     var to = document.getElementById('orderDateTo').value;
     return adminState.orders.filter(function (order) {
@@ -797,6 +799,7 @@ function getFilteredOrders() {
         if (term && haystack.indexOf(term) < 0) return false;
         if (status && (order.status || 'new') !== status) return false;
         if (region && (order.region || 'palestine') !== region) return false;
+        if (source && (order.source || 'web') !== source) return false;
         if (from && created.slice(0, 10) < from) return false;
         if (to && created.slice(0, 10) > to) return false;
         return true;
@@ -809,8 +812,9 @@ function renderOrdersTable() {
     tbody.innerHTML = orders.map(function (order) {
         var itemsText = safeArray(order.items).map(function (item) { return item.name + ' ' + (item.color || '-') + ' ' + (item.size || '-') + ' × ' + item.qty; }).join('، ');
         var select = '<select onchange="updateOrderStatus(\'' + order._docId + '\', this.value)">' + ['new', 'preparing', 'prepared', 'in_delivery', 'completed', 'declined', 'returned'].map(function (status) { return '<option value="' + status + '" ' + ((order.status || 'new') === status ? 'selected' : '') + '>' + getOrderStatusLabel(status) + '</option>'; }).join('') + '</select>';
-        return '<tr><td>' + escapeHtml(order.orderNumber || '') + '</td><td>' + escapeHtml(formatDateTime(order.createdAt || order.createdAtIso)) + '</td><td>' + escapeHtml(order.customerName || '') + '</td><td>' + escapeHtml(order.phone || '') + '</td><td>' + escapeHtml(order.regionLabel || getRegionLabel(order.region || 'palestine')) + '</td><td>' + formatCurrency(order.totalBase || 0, order.region || 'palestine', adminState.settings) + '</td><td>' + escapeHtml(order.paymentLabel || getPaymentMethodLabel(order.paymentMethod || 'cod')) + '</td><td>' + select + '</td><td>' + escapeHtml(itemsText) + '</td></tr>';
-    }).join('') || '<tr><td colspan="9">لا توجد طلبات مطابقة.</td></tr>';
+        var sourceLabel = (order.source === 'pos') ? 'المتجر' : 'الموقع';
+        return '<tr><td>' + escapeHtml(order.orderNumber || '') + '</td><td>' + escapeHtml(formatDateTime(order.createdAt || order.createdAtIso)) + '</td><td>' + escapeHtml(order.customerName || order.cashier || '') + '</td><td>' + escapeHtml(order.phone || '-') + '</td><td>' + escapeHtml(order.regionLabel || getRegionLabel(order.region || 'palestine')) + '</td><td>' + formatCurrency(order.totalBase || order.total || 0, order.region || 'palestine', adminState.settings) + '</td><td>' + escapeHtml(order.paymentLabel || getPaymentMethodLabel(order.paymentMethod || 'cod')) + '</td><td>' + sourceLabel + '</td><td>' + select + '</td><td>' + escapeHtml(itemsText) + '</td></tr>';
+    }).join('') || '<tr><td colspan="10">لا توجد طلبات مطابقة.</td></tr>';
 }
 
 function updateOrderStatus(docId, status) {

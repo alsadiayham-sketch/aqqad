@@ -96,12 +96,13 @@
                         <input id="orderSearchInput" type="text" placeholder="بحث برقم الطلب أو اسم الزبون">
                         <select id="orderStatusFilter"><option value="">كل الحالات</option><option value="new">جديد</option><option value="preparing">قيد التحضير</option><option value="prepared">جاهز للتجهيز</option><option value="in_delivery">في الطريق</option><option value="completed">مكتمل</option><option value="declined">مرفوض</option><option value="returned">مرتجع</option></select>
                         <select id="orderRegionFilter"><option value="">كل المناطق</option><option value="palestine">فلسطين</option><option value="jordan">الأردن</option></select>
+                        <select id="orderSourceFilter"><option value="">كل المصادر</option><option value="web">الموقع</option><option value="pos">المتجر</option></select>
                         <input id="orderDateFrom" type="date">
                         <input id="orderDateTo" type="date">
                         <select id="ordersExportFormat"><option value="xlsx">Excel</option><option value="csv">CSV</option></select>
                         <button class="ghost-btn" id="exportOrdersBtn" type="button">تصدير الطلبات</button>
                     </div>
-                    <div class="table-wrap"><table><thead><tr><th>رقم الطلب</th><th>التاريخ</th><th>الزبون</th><th>الهاتف</th><th>المنطقة</th><th>الإجمالي</th><th>الدفع</th><th>الحالة</th><th>العناصر</th></tr></thead><tbody id="ordersTableBody"></tbody></table></div>
+                    <div class="table-wrap"><table><thead><tr><th>رقم الطلب</th><th>التاريخ</th><th>الزبون</th><th>الهاتف</th><th>المنطقة</th><th>الإجمالي</th><th>الدفع</th><th>المصدر</th><th>الحالة</th><th>العناصر</th></tr></thead><tbody id="ordersTableBody"></tbody></table></div>
                 </div>
             </section>
 
