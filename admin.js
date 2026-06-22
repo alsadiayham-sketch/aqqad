@@ -191,6 +191,11 @@ function subscribeData() {
     });
     db.collection('orders').onSnapshot(function (snapshot) {
         adminState.orders = snapshot.docs.map(function (docSnap) { var data = docSnap.data(); data._docId = docSnap.id; return data; });
+        adminState.orders.sort(function (a, b) {
+            var da = a.createdAt && a.createdAt.toDate ? a.createdAt.toDate().getTime() : (a.createdAtIso ? new Date(a.createdAtIso).getTime() : 0);
+            var db2 = b.createdAt && b.createdAt.toDate ? b.createdAt.toDate().getTime() : (b.createdAtIso ? new Date(b.createdAtIso).getTime() : 0);
+            return db2 - da;
+        });
         renderOrdersTable();
         renderDashboard();
     });
