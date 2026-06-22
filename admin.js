@@ -1023,8 +1023,8 @@ function renderPosUsersTable() {
         var statusLabel = u.active !== false ? 'نشط' : 'معطل';
         var toggleLabel = u.active !== false ? 'تعطيل' : 'تفعيل';
         html += '<tr>';
-        html += '<td>' + (u.username || '') + '</td>';
-        html += '<td>' + (u.displayName || '') + '</td>';
+        html += '<td>' + escapeHtml(u.username || '') + '</td>';
+        html += '<td>' + escapeHtml(u.displayName || '') + '</td>';
         html += '<td>' + (u.role === 'admin' ? 'مدير' : 'كاشير') + '</td>';
         html += '<td>' + statusLabel + '</td>';
         html += '<td><button class="action-link" onclick="togglePosUser(' + i + ')">' + toggleLabel + '</button> <button class="action-link danger" onclick="removePosUser(' + i + ')">حذف</button></td>';
@@ -1043,9 +1043,9 @@ function renderPosLogsTable() {
         var date = l.timestamp && l.timestamp.toDate ? l.timestamp.toDate().toLocaleString('ar-EG') : '';
         html += '<tr>';
         html += '<td>' + date + '</td>';
-        html += '<td>' + (l.user || '') + '</td>';
-        html += '<td>' + (l.type || '') + '</td>';
-        html += '<td>' + (l.description || '') + '</td>';
+        html += '<td>' + escapeHtml(l.user || '') + '</td>';
+        html += '<td>' + escapeHtml(l.type || '') + '</td>';
+        html += '<td>' + escapeHtml(l.description || '') + '</td>';
         html += '</tr>';
     }
     body.innerHTML = html || '<tr><td colspan="4" style="text-align:center;">لا توجد سجلات</td></tr>';
