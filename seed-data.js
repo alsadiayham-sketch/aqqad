@@ -366,10 +366,12 @@ var SEED_DISCOUNTS = [
     { id: 'aqqad-brand', title: 'مفاجأة عقاد كيدز', type: 'brand', values: ['عقاد كيدز'], percentage: 5, description: 'خصم إضافي على تشكيلة عقاد كيدز.', expiresAt: '' }
 ];
 
-function getSeedUsers() {
-    return normalizeUsersDoc({
-        aqqad: { password: '5555', role: 'admin', name: 'المدير الرئيسي' },
-        orders: { password: '2222', role: 'worker', name: 'موظف الطلبات' }
+function buildSeedUsers() {
+    return Promise.all([
+        FloriaAuth.makeUser('المدير الرئيسي', 'admin', '5555'),
+        FloriaAuth.makeUser('موظف الطلبات', 'worker', '2222')
+    ]).then(function (recs) {
+        return { aqqad: recs[0], orders: recs[1] };
     });
 }
 
@@ -395,6 +397,8 @@ function seedFirestoreData(force) {
             });
         }
         return run.then(function () {
+            return buildSeedUsers();
+        }).then(function (seedUsers) {
             var batch = db.batch();
             normalizeProducts(SEED_PRODUCTS).forEach(function (product) {
                 batch.set(db.collection('products').doc(product.id), product);
@@ -403,7 +407,7 @@ function seedFirestoreData(force) {
                 batch.set(db.collection('discounts').doc(discount.id), discount);
             });
             batch.set(db.collection('settings').doc('config'), normalizeSettings(DEFAULT_SITE_SETTINGS), { merge: true });
-            batch.set(db.collection('settings').doc('users'), getSeedUsers(), { merge: true });
+            batch.set(db.collection('settings').doc('users'), seedUsers, { merge: true });
             batch.set(db.collection('settings').doc('heroSlides'), normalizeHeroSlidesDoc(getDefaultHeroSlidesDoc()), { merge: true });
             return batch.commit();
         }).then(function () {

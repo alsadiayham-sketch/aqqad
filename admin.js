@@ -5,7 +5,8 @@ var adminState = {
     discounts: [],
     orders: [],
     settings: normalizeSettings(DEFAULT_SITE_SETTINGS),
-    users: normalizeUsersDoc({}),
+    users: [],
+    posUsers: [],
     heroSlides: normalizeHeroSlidesDoc(getDefaultHeroSlidesDoc()).slides,
     productDraft: null,
     charts: {},
@@ -91,19 +92,16 @@ function setAdminStatus(message, type) {
 function saveSession(user) { sessionStorage.setItem(ADMIN_SESSION_KEY, JSON.stringify(user)); }
 
 function restoreSession() {
-    var payload = sessionStorage.getItem(ADMIN_SESSION_KEY);
-    if (!payload) return;
-    try {
-        var user = JSON.parse(payload);
-        if (user && user.username) {
-            adminState.currentUser = user;
-            adminState.currentRole = user.role;
-            showAdminApp();
-            initializeAdmin();
-        }
-    } catch (error) {
-        sessionStorage.removeItem(ADMIN_SESSION_KEY);
-    }
+    var user = storeAuth.getUser();
+    if (!user || !storeAuth.getToken()) return;
+    // Optimistically show the app, then confirm the token is still valid server-side.
+    storeAuth.session().then(function (srvUser) {
+        if (!srvUser) { storeAuth.logout(); window.location.reload(); return; }
+        adminState.currentUser = srvUser;
+        adminState.currentRole = srvUser.role;
+        showAdminApp();
+        initializeAdmin();
+    }).catch(function () { storeAuth.logout(); });
 }
 
 function handleLogin(event) {
@@ -112,17 +110,17 @@ function handleLogin(event) {
     var password = String(document.getElementById('adminPassword').value || '').trim();
     var errorNode = document.getElementById('loginError');
     if (!username || !password) { errorNode.textContent = 'أدخلي اسم المستخدم وكلمة المرور.'; return; }
-    if (!window.db) { errorNode.textContent = 'فايربيس غير متاح حالياً.'; return; }
-    db.collection('settings').doc('users').get().then(function (docSnap) {
-        var users = normalizeUsersDoc(docSnap.exists ? docSnap.data() : {});
-        var record = users[username];
-        if (!record || record.password !== password) { errorNode.textContent = 'بيانات الدخول غير صحيحة.'; return; }
-        adminState.currentUser = { username: username, role: record.role, name: record.name || username };
-        adminState.currentRole = record.role;
-        saveSession(adminState.currentUser);
+    if (!window.storeAuth) { errorNode.textContent = 'تعذر الاتصال بالخادم.'; return; }
+    errorNode.textContent = '';
+    // Credentials are verified on the server (/api/login); the browser never sees any hash.
+    storeAuth.login(username, password).then(function (user) {
+        adminState.currentUser = user;
+        adminState.currentRole = user.role;
         showAdminApp();
         initializeAdmin();
-    }).catch(function () { errorNode.textContent = 'تعذر التحقق من المستخدم.'; });
+    }).catch(function (err) {
+        errorNode.textContent = (err && err.status === 401) ? 'بيانات الدخول غير صحيحة.' : 'تعذر تسجيل الدخول.';
+    });
 }
 
 function showAdminApp() {
@@ -132,7 +130,7 @@ function showAdminApp() {
     applyRolePermissions();
 }
 
-function logoutAdmin() { sessionStorage.removeItem(ADMIN_SESSION_KEY); window.location.reload(); }
+function logoutAdmin() { storeAuth.logout(); sessionStorage.removeItem(ADMIN_SESSION_KEY); window.location.reload(); }
 
 function applyRolePermissions() {
     var isWorker = adminState.currentRole === 'worker';
@@ -161,12 +159,9 @@ function initializeAdmin() {
 }
 
 function ensureDefaults() {
-    return db.collection('settings').doc('users').get().then(function (usersDoc) {
-        if (!usersDoc.exists) return db.collection('settings').doc('users').set(getSeedUsers());
-        return null;
-    }).then(function () {
-        return db.collection('settings').doc('config').get();
-    }).then(function (configDoc) {
+    // Admin/cashier users are owned by the server (seeded at migration). Here we
+    // only make sure the public config + hero docs exist.
+    return db.collection('settings').doc('config').get().then(function (configDoc) {
         if (!configDoc.exists) return db.collection('settings').doc('config').set(normalizeSettings(DEFAULT_SITE_SETTINGS));
         return null;
     }).then(function () {
@@ -175,6 +170,25 @@ function ensureDefaults() {
         if (!heroDoc.exists) return db.collection('settings').doc('heroSlides').set(normalizeHeroSlidesDoc(getDefaultHeroSlidesDoc()));
         return null;
     });
+}
+
+// Load admin users from the secure endpoint (no hashes are ever returned).
+function loadUsers() {
+    if (adminState.currentRole !== 'admin') return Promise.resolve();
+    return storeAuth.listUsers().then(function (users) {
+        adminState.users = users || [];
+        renderUsersTable();
+        renderDashboard();
+    }).catch(function () {});
+}
+
+// Load cashier (POS) users from the secure endpoint.
+function loadPosUsers() {
+    if (adminState.currentRole !== 'admin') return Promise.resolve();
+    return storeAuth.listPosUsers().then(function (users) {
+        adminState.posUsers = users || [];
+        renderPosUsersTable();
+    }).catch(function () {});
 }
 
 function subscribeData() {
@@ -192,8 +206,8 @@ function subscribeData() {
     db.collection('orders').onSnapshot(function (snapshot) {
         adminState.orders = snapshot.docs.map(function (docSnap) { var data = docSnap.data(); data._docId = docSnap.id; return data; });
         adminState.orders.sort(function (a, b) {
-            var da = a.createdAt && a.createdAt.toDate ? a.createdAt.toDate().getTime() : (a.createdAtIso ? new Date(a.createdAtIso).getTime() : 0);
-            var db2 = b.createdAt && b.createdAt.toDate ? b.createdAt.toDate().getTime() : (b.createdAtIso ? new Date(b.createdAtIso).getTime() : 0);
+            var da = typeof a.createdAt === 'number' ? a.createdAt : (a.createdAtIso ? new Date(a.createdAtIso).getTime() : 0);
+            var db2 = typeof b.createdAt === 'number' ? b.createdAt : (b.createdAtIso ? new Date(b.createdAtIso).getTime() : 0);
             return db2 - da;
         });
         renderOrdersTable();
@@ -204,20 +218,14 @@ function subscribeData() {
         renderSettingsForm();
         renderDashboard();
     });
-    db.collection('settings').doc('users').onSnapshot(function (docSnap) {
-        adminState.users = normalizeUsersDoc(docSnap.exists ? docSnap.data() : {});
-        renderUsersTable();
-        renderDashboard();
-    });
+    // Admin + cashier users come from dedicated secure endpoints (never hashes).
+    loadUsers();
     db.collection('settings').doc('heroSlides').onSnapshot(function (docSnap) {
         adminState.heroSlides = normalizeHeroSlidesDoc(docSnap.exists ? docSnap.data() : getDefaultHeroSlidesDoc()).slides;
         renderHeroSlides();
     });
     // POS users and logs
-    db.collection('settings').doc('pos_users').onSnapshot(function (docSnap) {
-        adminState.posUsers = docSnap.exists ? (docSnap.data().users || []) : [];
-        renderPosUsersTable();
-    });
+    loadPosUsers();
     db.collection('pos_logs').orderBy('timestamp', 'desc').limit(100).onSnapshot(function (snapshot) {
         adminState.posLogs = snapshot.docs.map(function (d) { var data = d.data(); data.id = d.id; return data; });
         renderPosLogsTable();
@@ -227,7 +235,7 @@ function subscribeData() {
 function renderDashboard() {
     document.getElementById('statProducts').textContent = adminState.products.length;
     document.getElementById('statOrders').textContent = adminState.orders.length;
-    document.getElementById('statUsers').textContent = Object.keys(adminState.users).length;
+    document.getElementById('statUsers').textContent = (adminState.users || []).length;
     var revenue = 0;
     for (var i = 0; i < adminState.orders.length; i += 1) revenue += Number(adminState.orders[i].totalBase) || 0;
     document.getElementById('statRevenue').textContent = formatCurrency(revenue, 'palestine', adminState.settings);
@@ -744,11 +752,17 @@ function persistHeroSlides() {
 function renderUsersTable() {
     var tbody = document.getElementById('usersTableBody');
     var rows = [];
-    Object.keys(adminState.users).forEach(function (username) {
-        var user = adminState.users[username];
-        rows.push('<tr><td>' + escapeHtml(username) + '</td><td>' + escapeHtml(user.name) + '</td><td>' + (user.role === 'worker' ? 'موظف' : 'مدير') + '</td><td><button class="action-link" onclick="editUser(\'' + username + '\')">تعديل</button><button class="action-link" onclick="resetUserPassword(\'' + username + '\')">إعادة تعيين</button><button class="action-link" onclick="removeUser(\'' + username + '\')">حذف</button></td></tr>');
+    (adminState.users || []).forEach(function (user) {
+        var username = user.username;
+        rows.push('<tr><td>' + escapeHtml(username) + '</td><td>' + escapeHtml(user.name || username) + '</td><td>' + (user.role === 'worker' ? 'موظف' : 'مدير') + '</td><td><button class="action-link" onclick="editUser(\'' + escapeHtml(username) + '\')">تعديل</button><button class="action-link" onclick="resetUserPassword(\'' + escapeHtml(username) + '\')">إعادة تعيين</button><button class="action-link" onclick="removeUser(\'' + escapeHtml(username) + '\')">حذف</button></td></tr>');
     });
     tbody.innerHTML = rows.join('') || '<tr><td colspan="4">لا يوجد مستخدمون.</td></tr>';
+}
+
+function findUser(username) {
+    var list = adminState.users || [];
+    for (var i = 0; i < list.length; i++) { if (list[i].username === username) return list[i]; }
+    return null;
 }
 
 function saveUser(event) {
@@ -756,39 +770,48 @@ function saveUser(event) {
     if (adminState.currentRole !== 'admin') return;
     var username = String(document.getElementById('userUsername').value || '').trim();
     if (!username) return;
-    adminState.users[username] = {
-        name: document.getElementById('userName').value || username,
-        password: document.getElementById('userPassword').value || '5555',
-        role: document.getElementById('userRole').value === 'worker' ? 'worker' : 'admin'
-    };
-    db.collection('settings').doc('users').set(adminState.users).then(function () {
+    var name = document.getElementById('userName').value || username;
+    var role = document.getElementById('userRole').value === 'worker' ? 'worker' : 'admin';
+    var password = document.getElementById('userPassword').value;
+    var existing = findUser(username);
+    if (!existing && !password) { setAdminStatus('كلمة المرور مطلوبة للمستخدم الجديد.', 'error'); return; }
+    var payload = { username: username, name: name, role: role };
+    if (password) payload.password = password;
+    storeAuth.saveUser(payload).then(function () {
         document.getElementById('userForm').reset();
         setAdminStatus('تم حفظ الموظف.', 'success');
-    });
+        return loadUsers();
+    }).catch(function () { setAdminStatus('تعذر حفظ الموظف.', 'error'); });
 }
 
 function editUser(username) {
-    var user = adminState.users[username];
+    var user = findUser(username);
     if (!user) return;
     document.getElementById('userUsername').value = username;
-    document.getElementById('userName').value = user.name;
-    document.getElementById('userPassword').value = user.password;
+    document.getElementById('userName').value = user.name || username;
+    document.getElementById('userPassword').value = '';
     document.getElementById('userRole').value = user.role;
 }
 
 function removeUser(username) {
     if (adminState.currentRole !== 'admin' || username === 'aqqad') return;
     if (!confirm('حذف الموظف؟')) return;
-    delete adminState.users[username];
-    db.collection('settings').doc('users').set(adminState.users);
+    storeAuth.deleteUser(username).then(function () {
+        setAdminStatus('تم حذف الموظف.', 'success');
+        return loadUsers();
+    }).catch(function () { setAdminStatus('تعذر حذف الموظف.', 'error'); });
 }
 
 function resetUserPassword(username) {
     if (adminState.currentRole !== 'admin') return;
+    var user = findUser(username);
+    if (!user) return;
     var password = prompt('كلمة المرور الجديدة للمستخدم ' + username, '5555');
     if (password == null) return;
-    adminState.users[username].password = String(password || '5555');
-    db.collection('settings').doc('users').set(adminState.users).then(function () { setAdminStatus('تم تحديث كلمة المرور.', 'success'); });
+    storeAuth.saveUser({ username: username, name: user.name, role: user.role, password: String(password || '5555') }).then(function () {
+        setAdminStatus('تم تحديث كلمة المرور.', 'success');
+        return loadUsers();
+    }).catch(function () { setAdminStatus('تعذر تحديث كلمة المرور.', 'error'); });
 }
 
 function getFilteredOrders() {
@@ -823,7 +846,7 @@ function renderOrdersTable() {
 }
 
 function updateOrderStatus(docId, status) {
-    db.collection('orders').doc(docId).update({ status: status, statusLabel: getOrderStatusLabel(status), updatedAt: firebase.firestore.FieldValue.serverTimestamp(), updatedAtIso: new Date().toISOString() });
+    db.collection('orders').doc(docId).update({ status: status, statusLabel: getOrderStatusLabel(status), updatedAt: Date.now(), updatedAtIso: new Date().toISOString() });
 }
 
 function exportProductsCsv() {
@@ -1020,14 +1043,15 @@ function renderPosUsersTable() {
     var html = '';
     for (var i = 0; i < users.length; i++) {
         var u = users[i];
+        var uname = (u.username || '').replace(/'/g, "\\'");
         var statusLabel = u.active !== false ? 'نشط' : 'معطل';
         var toggleLabel = u.active !== false ? 'تعطيل' : 'تفعيل';
         html += '<tr>';
         html += '<td>' + escapeHtml(u.username || '') + '</td>';
-        html += '<td>' + escapeHtml(u.displayName || '') + '</td>';
+        html += '<td>' + escapeHtml(u.name || u.displayName || '') + '</td>';
         html += '<td>' + (u.role === 'admin' ? 'مدير' : 'كاشير') + '</td>';
         html += '<td>' + statusLabel + '</td>';
-        html += '<td><button class="action-link" onclick="togglePosUser(' + i + ')">' + toggleLabel + '</button> <button class="action-link danger" onclick="removePosUser(' + i + ')">حذف</button></td>';
+        html += '<td><button class="action-link" onclick="togglePosUser(\'' + uname + '\')">' + toggleLabel + '</button> <button class="action-link danger" onclick="removePosUser(\'' + uname + '\')">حذف</button></td>';
         html += '</tr>';
     }
     body.innerHTML = html || '<tr><td colspan="5" style="text-align:center;">لا يوجد مستخدمون</td></tr>';
@@ -1040,7 +1064,7 @@ function renderPosLogsTable() {
     var html = '';
     for (var i = 0; i < logs.length; i++) {
         var l = logs[i];
-        var date = l.timestamp && l.timestamp.toDate ? l.timestamp.toDate().toLocaleString('ar-EG') : '';
+        var date = (l.timestamp != null) ? new Date(typeof l.timestamp === 'number' ? l.timestamp : l.timestamp).toLocaleString('ar-EG') : '';
         html += '<tr>';
         html += '<td>' + date + '</td>';
         html += '<td>' + escapeHtml(l.user || '') + '</td>';
@@ -1053,38 +1077,38 @@ function renderPosLogsTable() {
 
 function savePosUser(e) {
     e.preventDefault();
+    if (adminState.currentRole !== 'admin') return;
     var username = document.getElementById('posUserUsername').value.trim();
     var displayName = document.getElementById('posUserName').value.trim();
     var password = document.getElementById('posUserPassword').value;
     var role = document.getElementById('posUserRole').value;
-    if (!username || !password || !displayName) { setAdminStatus('يرجى ملء جميع الحقول', 'error'); return; }
-
-    var users = (adminState.posUsers || []).slice();
-    var existing = users.findIndex(function (u) { return u.username === username; });
-    if (existing >= 0) {
-        users[existing] = { username: username, displayName: displayName, password: password, role: role, active: true };
-    } else {
-        users.push({ username: username, displayName: displayName, password: password, role: role, active: true });
-    }
-
-    db.collection('settings').doc('pos_users').set({ users: users }).then(function () {
+    if (!username || !displayName) { setAdminStatus('يرجى ملء جميع الحقول', 'error'); return; }
+    var existing = null;
+    var list = adminState.posUsers || [];
+    for (var i = 0; i < list.length; i++) { if (list[i].username === username) { existing = list[i]; break; } }
+    if (!existing && !password) { setAdminStatus('كلمة المرور مطلوبة للمستخدم الجديد', 'error'); return; }
+    var payload = { username: username, name: displayName, role: role, active: true };
+    if (password) payload.password = password;
+    storeAuth.savePosUser(payload).then(function () {
         setAdminStatus('تم حفظ مستخدم POS', 'success');
         document.getElementById('posUserForm').reset();
-    });
+        return loadPosUsers();
+    }).catch(function () { setAdminStatus('تعذر حفظ مستخدم POS', 'error'); });
 }
 
-function togglePosUser(index) {
-    var users = (adminState.posUsers || []).slice();
-    if (!users[index]) return;
-    users[index].active = users[index].active === false ? true : false;
-    db.collection('settings').doc('pos_users').set({ users: users });
+function togglePosUser(username) {
+    if (adminState.currentRole !== 'admin') return;
+    var list = adminState.posUsers || [];
+    var u = null;
+    for (var i = 0; i < list.length; i++) { if (list[i].username === username) { u = list[i]; break; } }
+    if (!u) return;
+    storeAuth.savePosUser({ username: u.username, name: u.name || u.displayName || u.username, role: u.role, active: u.active === false }).then(loadPosUsers);
 }
 
-function removePosUser(index) {
+function removePosUser(username) {
+    if (adminState.currentRole !== 'admin') return;
     if (!confirm('هل أنت متأكد من حذف هذا المستخدم؟')) return;
-    var users = (adminState.posUsers || []).slice();
-    users.splice(index, 1);
-    db.collection('settings').doc('pos_users').set({ users: users });
+    storeAuth.deletePosUser(username).then(loadPosUsers);
 }
 
 // Expose POS functions globally

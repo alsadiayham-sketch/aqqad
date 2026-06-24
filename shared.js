@@ -745,49 +745,15 @@ var CORE_CACHE_TTL = 30 * 60 * 1000;
             return;
         }
         payload.source = 'web';
-        payload.createdAt = firebase.firestore.FieldValue.serverTimestamp();
-        payload.updatedAt = firebase.firestore.FieldValue.serverTimestamp();
+        payload.createdAt = Date.now();
+        payload.createdAtIso = new Date().toISOString();
+        payload.updatedAt = Date.now();
 
-        // Atomic batch: save order + deduct stock
-        var batch = db.batch();
-        var orderRef = db.collection('orders').doc();
-        batch.set(orderRef, payload);
-
-        // Deduct stock from product variants
-        var items = safeArray(payload.items);
-        var productUpdates = {};
-        for (var i = 0; i < items.length; i += 1) {
-            var item = items[i];
-            if (!item.productId) continue;
-            if (!productUpdates[item.productId]) {
-                var prod = null;
-                for (var j = 0; j < state.products.length; j += 1) {
-                    if (state.products[j].id === item.productId) { prod = state.products[j]; break; }
-                }
-                if (prod) {
-                    productUpdates[item.productId] = {
-                        ref: db.collection('products').doc(item.productId),
-                        variants: JSON.parse(JSON.stringify(safeArray(prod.variants)))
-                    };
-                }
-            }
-            if (productUpdates[item.productId]) {
-                var vars = productUpdates[item.productId].variants;
-                for (var k = 0; k < vars.length; k += 1) {
-                    if (String(vars[k].size) === String(item.size) && String(vars[k].color) === String(item.color)) {
-                        vars[k].stock = Math.max(0, (parseInt(vars[k].stock, 10) || 0) - (item.qty || 1));
-                    }
-                }
-            }
-        }
-        var prodKeys = Object.keys(productUpdates);
-        for (var i = 0; i < prodKeys.length; i += 1) {
-            var pu = productUpdates[prodKeys[i]];
-            batch.update(pu.ref, { variants: pu.variants });
-        }
-
-        batch.commit().then(function () {
-            if (onSuccess) onSuccess({ id: orderRef.id });
+        // Save the order via the public /api/orders endpoint. Stock for each
+        // variant is deducted server-side (atomically) from the order items, so
+        // anonymous shoppers never need write access to the products table.
+        db.collection('orders').add(payload).then(function (ref) {
+            if (onSuccess) onSuccess({ id: ref.id });
         }).catch(function () {
             if (onError) onError('تعذر حفظ الطلب الآن.');
         });

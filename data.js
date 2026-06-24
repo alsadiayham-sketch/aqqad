@@ -508,17 +508,25 @@ function normalizeSettings(settings) {
 
 function normalizeUsersDoc(doc) {
     var source = cloneObject(doc || {});
-    if (!source.aqqad) {
-        source.aqqad = { password: '5555', role: 'admin', name: 'المدير الرئيسي' };
-    }
     var keys = Object.keys(source);
     for (var i = 0; i < keys.length; i += 1) {
         var key = keys[i];
-        source[key] = {
-            password: String(source[key].password || ''),
-            role: source[key].role === 'worker' ? 'worker' : 'admin',
-            name: String(source[key].name || key)
+        var rec = source[key] || {};
+        var out = {
+            role: rec.role === 'worker' ? 'worker' : 'admin',
+            name: String(rec.name || key)
         };
+        // Preserve modern PBKDF2 credential fields.
+        if (rec.hash && rec.salt) {
+            out.salt = String(rec.salt);
+            out.hash = String(rec.hash);
+            out.iterations = rec.iterations || 150000;
+            out.algo = rec.algo || 'PBKDF2-SHA256';
+        }
+        // Preserve legacy verifiers so login can transparently upgrade them.
+        if (rec.passwordHash) out.passwordHash = String(rec.passwordHash);
+        if (typeof rec.password === 'string' && rec.password.length) out.password = rec.password;
+        source[key] = out;
     }
     return source;
 }

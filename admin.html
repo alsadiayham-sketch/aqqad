@@ -172,7 +172,7 @@
                         <form id="userForm" class="admin-form stack">
                             <input id="userUsername" type="text" placeholder="اسم المستخدم">
                             <input id="userName" type="text" placeholder="الاسم الظاهر">
-                            <input id="userPassword" type="text" placeholder="كلمة المرور">
+                            <input id="userPassword" type="password" placeholder="كلمة المرور (اتركها فارغة للإبقاء عند التعديل)" autocomplete="new-password">
                             <select id="userRole"><option value="admin">مدير</option><option value="worker">موظف</option></select>
                             <button class="primary-btn" type="submit">حفظ المستخدم</button>
                         </form>
@@ -256,8 +256,6 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js" integrity="sha384-9nhczxUqK87bcKHh20fSQcTGD4qq5GhayNYSYWqwBkINBhOfQLg/P5HG5lF1urn4" crossorigin="anonymous"></script>
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js" integrity="sha384-vtjasyidUo0kW94K5MXDXntzOJpQgBKXmE7e2Ga4LG0skTTLeBi97eFAXsqewJjw" crossorigin="anonymous"></script>
     <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js" integrity="sha384-D/t0ZMqQW31H3az8ktEiNb39wyKnS82iFY52QPACM+IjKW3jDUhyIgh2PApRqJZs" crossorigin="anonymous"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore-compat.js"></script>
     <script src="firebase-config.js"></script>
     <script src="data.js"></script>
     <script src="admin.js"></script>
