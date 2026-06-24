@@ -1,5 +1,4 @@
 import { json, bad, requireRole, requirePos, readJson } from "./_utils.js";
-
 function rowToOrder(row) {
     let obj = {};
     try { obj = JSON.parse(row.data) || {}; } catch (e) { obj = {}; }
@@ -26,7 +25,8 @@ export async function onRequestGet(context) {
         if (!row) return json({ order: null }, 404);
         return json({ order: rowToOrder(row) });
     }
-    const gate = await requireRole(context.request, context.env, null);
+    // List requires a session: admin/worker back-office OR a POS cashier token.
+    const gate = await requirePos(context.request, context.env, null);
     if (gate.error) return gate.error;
     const { results } = await context.env.DB
         .prepare("SELECT id, order_number, source, data, status, created_at FROM orders ORDER BY created_at DESC")
