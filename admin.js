@@ -237,11 +237,69 @@ function renderDashboard() {
     document.getElementById('statOrders').textContent = adminState.orders.length;
     document.getElementById('statUsers').textContent = (adminState.users || []).length;
     var revenue = 0;
-    for (var i = 0; i < adminState.orders.length; i += 1) revenue += Number(adminState.orders[i].totalBase) || 0;
+    for (var i = 0; i < adminState.orders.length; i += 1) revenue += getOrderTotalBase(adminState.orders[i]);
     document.getElementById('statRevenue').textContent = formatCurrency(revenue, 'palestine', adminState.settings);
     renderChart('ordersStatusChart', 'bar', collectOrderStatusData());
     renderChart('ordersRegionChart', 'doughnut', collectRegionData());
     renderChart('brandsChart', 'bar', collectBrandData());
+    renderChart('revenueTimelineChart', 'line', collectRevenueTimelineData());
+    renderChart('ordersTimelineChart', 'bar', collectOrdersTimelineData());
+    renderChart('topProductsChart', 'bar', collectTopProductsData());
+    renderChart('paymentMethodsChart', 'doughnut', collectPaymentMethodData());
+    renderChart('regionRevenueChart', 'bar', collectRegionRevenueData());
+}
+
+function getOrderTotalBase(order) {
+    return Number(order && (order.totalBase || order.total || 0)) || 0;
+}
+
+function getOrderDate(order) {
+    if (!order) return null;
+    if (order.createdAt && order.createdAt.toDate) return order.createdAt.toDate();
+    if (typeof order.createdAt === 'number') return new Date(order.createdAt);
+    if (order.createdAtIso) return new Date(order.createdAtIso);
+    return null;
+}
+
+function getChartDateKey(date) {
+    var y = date.getFullYear();
+    var m = String(date.getMonth() + 1);
+    var d = String(date.getDate());
+    if (m.length < 2) m = '0' + m;
+    if (d.length < 2) d = '0' + d;
+    return y + '-' + m + '-' + d;
+}
+
+function getShortDateLabel(key) {
+    return key.slice(8, 10) + '/' + key.slice(5, 7);
+}
+
+function getOrderRegionKey(order) {
+    var region = String(order && order.region || '').toLowerCase();
+    var deliveryId = String(order && (order.deliveryId || order.delivery || '') || '').toLowerCase();
+    if (region === 'jordan' || deliveryId === 'jordan' || deliveryId === 'amman') return 'jordan';
+    if (deliveryId === 'inside') return 'inside';
+    if (deliveryId === 'westbank' || deliveryId === 'jerusalem') return 'westbank';
+    if (region === 'palestine') return 'westbank';
+    return deliveryId || region || 'westbank';
+}
+
+function getDeliveryRegionLabel(key, order) {
+    var labels = {
+        westbank: 'الضفة الغربية',
+        inside: 'الداخل',
+        jordan: 'الأردن',
+        jerusalem: 'الضفة الغربية'
+    };
+    return labels[key] || (order && (order.deliveryName || order.regionLabel)) || key;
+}
+
+function makePercentages(values) {
+    var total = 0;
+    for (var i = 0; i < values.length; i += 1) total += Number(values[i]) || 0;
+    return values.map(function (value) {
+        return total ? Math.round(((Number(value) || 0) / total) * 100) : 0;
+    });
 }
 
 function collectOrderStatusData() {
@@ -255,13 +313,24 @@ function collectOrderStatusData() {
 }
 
 function collectRegionData() {
-    var labels = ['palestine', 'jordan'];
-    var counts = labels.map(function (region) {
-        var count = 0;
-        for (var i = 0; i < adminState.orders.length; i += 1) if ((adminState.orders[i].region || 'palestine') === region) count += 1;
-        return count;
-    });
-    return { labels: labels.map(getRegionLabel), datasets: [{ data: counts, backgroundColor: ['#c89f5b', '#b59bf0'] }] };
+    var orderKeys = ['westbank', 'inside', 'jordan'];
+    var countsMap = {};
+    var labelsMap = {};
+    for (var i = 0; i < adminState.orders.length; i += 1) {
+        var order = adminState.orders[i];
+        var key = getOrderRegionKey(order);
+        countsMap[key] = (countsMap[key] || 0) + 1;
+        labelsMap[key] = getDeliveryRegionLabel(key, order);
+        if (orderKeys.indexOf(key) < 0) orderKeys.push(key);
+    }
+    var labels = [];
+    var counts = [];
+    for (var j = 0; j < orderKeys.length; j += 1) {
+        var regionKey = orderKeys[j];
+        labels.push(labelsMap[regionKey] || getDeliveryRegionLabel(regionKey));
+        counts.push(countsMap[regionKey] || 0);
+    }
+    return { labels: labels, percentages: makePercentages(counts), datasets: [{ data: counts, backgroundColor: ['#c89f5b', '#8f6128', '#b59bf0', '#f2b87c', '#e48ba2'] }] };
 }
 
 function collectBrandData() {
@@ -271,12 +340,144 @@ function collectBrandData() {
     return { labels: labels, datasets: [{ label: 'عدد المنتجات', data: labels.map(function (key) { return map[key]; }), backgroundColor: '#8f6128' }] };
 }
 
+function collectTimelineData(days, mode) {
+    var today = new Date();
+    var start = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+    start.setDate(start.getDate() - (days - 1));
+    var keys = [];
+    var map = {};
+    for (var i = 0; i < days; i += 1) {
+        var date = new Date(start.getTime());
+        date.setDate(start.getDate() + i);
+        var key = getChartDateKey(date);
+        keys.push(key);
+        map[key] = 0;
+    }
+    for (var j = 0; j < adminState.orders.length; j += 1) {
+        var order = adminState.orders[j];
+        var orderDate = getOrderDate(order);
+        if (!orderDate || isNaN(orderDate.getTime())) continue;
+        var dayKey = getChartDateKey(orderDate);
+        if (map[dayKey] == null) continue;
+        map[dayKey] += mode === 'revenue' ? getOrderTotalBase(order) : 1;
+    }
+    return { keys: keys, values: keys.map(function (key) { return map[key]; }) };
+}
+
+function collectRevenueTimelineData() {
+    var timeline = collectTimelineData(30, 'revenue');
+    return {
+        labels: timeline.keys.map(getShortDateLabel),
+        datasets: [{
+            label: 'الإيرادات',
+            data: timeline.values,
+            borderColor: '#c89f5b',
+            backgroundColor: 'rgba(200,159,91,0.18)',
+            fill: true,
+            tension: 0.35
+        }]
+    };
+}
+
+function collectOrdersTimelineData() {
+    var timeline = collectTimelineData(30, 'orders');
+    return { labels: timeline.keys.map(getShortDateLabel), datasets: [{ label: 'عدد الطلبات', data: timeline.values, backgroundColor: '#8f6128' }] };
+}
+
+function collectTopProductsData() {
+    var map = {};
+    for (var i = 0; i < adminState.orders.length; i += 1) {
+        var items = safeArray(adminState.orders[i].items);
+        for (var j = 0; j < items.length; j += 1) {
+            var item = items[j];
+            var key = item.productId || item.name || ('product-' + j);
+            if (!map[key]) map[key] = { name: item.name || key, qty: 0 };
+            map[key].qty += Number(item.qty) || 0;
+        }
+    }
+    var rows = Object.keys(map).map(function (key) { return map[key]; });
+    rows.sort(function (a, b) { return b.qty - a.qty; });
+    rows = rows.slice(0, 10);
+    return {
+        labels: rows.map(function (row) { return row.name; }),
+        datasets: [{ label: 'الكمية المباعة', data: rows.map(function (row) { return row.qty; }), backgroundColor: '#b59bf0' }],
+        chartOptions: { indexAxis: 'y' }
+    };
+}
+
+function collectPaymentMethodData() {
+    var orderKeys = ['cod', 'visa', 'other'];
+    var countsMap = {};
+    for (var i = 0; i < adminState.orders.length; i += 1) {
+        var method = String(adminState.orders[i].paymentMethod || 'cod').toLowerCase();
+        if (method !== 'cod' && method !== 'visa') method = 'other';
+        countsMap[method] = (countsMap[method] || 0) + 1;
+    }
+    var labels = orderKeys.map(function (key) { return key === 'other' ? 'أخرى' : getPaymentMethodLabel(key); });
+    var counts = orderKeys.map(function (key) { return countsMap[key] || 0; });
+    return { labels: labels, percentages: makePercentages(counts), datasets: [{ data: counts, backgroundColor: ['#c89f5b', '#b59bf0', '#f2b87c', '#8f6128'] }] };
+}
+
+function collectRegionRevenueData() {
+    var orderKeys = ['westbank', 'inside', 'jordan'];
+    var totalsMap = {};
+    var labelsMap = {};
+    for (var i = 0; i < adminState.orders.length; i += 1) {
+        var order = adminState.orders[i];
+        var key = getOrderRegionKey(order);
+        totalsMap[key] = (totalsMap[key] || 0) + getOrderTotalBase(order);
+        labelsMap[key] = getDeliveryRegionLabel(key, order);
+        if (orderKeys.indexOf(key) < 0) orderKeys.push(key);
+    }
+    return {
+        labels: orderKeys.map(function (key) { return labelsMap[key] || getDeliveryRegionLabel(key); }),
+        datasets: [{ label: 'الإيرادات', data: orderKeys.map(function (key) { return totalsMap[key] || 0; }), backgroundColor: ['#c89f5b', '#8f6128', '#b59bf0', '#f2b87c', '#e48ba2'] }]
+    };
+}
+
 function renderChart(id, type, data) {
     if (typeof Chart === 'undefined') return;
     if (adminState.charts[id]) adminState.charts[id].destroy();
     var ctx = document.getElementById(id);
     if (!ctx) return;
-    adminState.charts[id] = new Chart(ctx, { type: type, data: data, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: true } } } });
+    var chartOptions = {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+            legend: {
+                display: true,
+                labels: {
+                    generateLabels: function (chart) {
+                        var baseLabels = Chart.defaults.plugins.legend.labels.generateLabels(chart);
+                        var percentages = chart.data.percentages || [];
+                        if (percentages.length) {
+                            for (var i = 0; i < baseLabels.length; i += 1) {
+                                baseLabels[i].text = baseLabels[i].text + ' ' + (percentages[i] || 0) + '%';
+                            }
+                        }
+                        return baseLabels;
+                    }
+                }
+            },
+            tooltip: {
+                callbacks: {
+                    label: function (context) {
+                        var label = context.label || (context.dataset && context.dataset.label) || '';
+                        var value = context.formattedValue || (context.parsed && context.parsed.y != null ? context.parsed.y : context.parsed);
+                        if (context.chart.data.percentages && context.chart.data.percentages.length) {
+                            return label + ': ' + value + ' (' + (context.chart.data.percentages[context.dataIndex] || 0) + '%)';
+                        }
+                        return label + ': ' + value;
+                    }
+                }
+            }
+        }
+    };
+    if (data.chartOptions) {
+        Object.keys(data.chartOptions).forEach(function (key) { chartOptions[key] = data.chartOptions[key]; });
+        delete data.chartOptions;
+    }
+    adminState.charts[id] = new Chart(ctx, { type: type, data: data, options: chartOptions });
 }
 
 function renderProductsTable() {
