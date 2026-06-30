@@ -53,6 +53,8 @@ function bindAdminEvents() {
     document.getElementById('orderSourceFilter').addEventListener('change', renderOrdersTable);
     document.getElementById('orderDateFrom').addEventListener('change', renderOrdersTable);
     document.getElementById('orderDateTo').addEventListener('change', renderOrdersTable);
+    var custSearch = document.getElementById('customersAdminSearch');
+    if (custSearch) custSearch.addEventListener('input', debounce(renderCustomersAdmin, 200));
     document.getElementById('heroSlidesUploader').addEventListener('change', uploadHeroFiles);
     document.getElementById('saveHeroSlidesBtn').addEventListener('click', persistHeroSlides);
     productModalEl = document.getElementById('productModal');
@@ -134,7 +136,7 @@ function logoutAdmin() { storeAuth.logout(); sessionStorage.removeItem(ADMIN_SES
 
 function applyRolePermissions() {
     var isWorker = adminState.currentRole === 'worker';
-    var hiddenTabs = ['dashboard', 'products', 'discounts', 'settings', 'hero', 'users'];
+    var hiddenTabs = ['dashboard', 'products', 'discounts', 'settings', 'hero', 'users', 'customers'];
     var buttons = document.querySelectorAll('.tab-btn');
     for (var i = 0; i < buttons.length; i += 1) {
         var tab = buttons[i].getAttribute('data-tab');
@@ -148,7 +150,7 @@ function switchTab(tab) {
     var panels = document.querySelectorAll('.tab-panel');
     for (var i = 0; i < buttons.length; i += 1) buttons[i].classList.toggle('active', buttons[i].getAttribute('data-tab') === tab);
     for (var j = 0; j < panels.length; j += 1) panels[j].classList.toggle('active', panels[j].id === 'tab-' + tab);
-    var titles = { dashboard: 'لوحة المؤشرات', products: 'إدارة المنتجات', orders: 'إدارة الطلبات', discounts: 'إدارة الخصومات', settings: 'إعدادات المتجر', hero: 'شرائح الواجهة الرئيسية', users: 'إدارة الموظفين' };
+    var titles = { dashboard: 'لوحة المؤشرات', products: 'إدارة المنتجات', orders: 'إدارة الطلبات', discounts: 'إدارة الخصومات', settings: 'إعدادات المتجر', hero: 'شرائح الواجهة الرئيسية', users: 'إدارة الموظفين', pos: 'نقطة البيع', customers: 'العملاء وبرنامج الولاء' };
     document.getElementById('tabTitle').textContent = titles[tab] || 'لوحة الإدارة';
 }
 
@@ -212,6 +214,7 @@ function subscribeData() {
         });
         renderOrdersTable();
         renderDashboard();
+        renderCustomersAdmin();
     });
     db.collection('settings').doc('config').onSnapshot(function (docSnap) {
         adminState.settings = normalizeSettings(docSnap.exists ? docSnap.data() : DEFAULT_SITE_SETTINGS);
@@ -233,11 +236,12 @@ function subscribeData() {
 }
 
 function renderDashboard() {
+    var realOrders = adminState.orders.filter(function (o) { return !o.recordType; });
     document.getElementById('statProducts').textContent = adminState.products.length;
-    document.getElementById('statOrders').textContent = adminState.orders.length;
+    document.getElementById('statOrders').textContent = realOrders.length;
     document.getElementById('statUsers').textContent = (adminState.users || []).length;
     var revenue = 0;
-    for (var i = 0; i < adminState.orders.length; i += 1) revenue += getOrderTotalBase(adminState.orders[i]);
+    for (var i = 0; i < realOrders.length; i += 1) revenue += getOrderTotalBase(realOrders[i]);
     document.getElementById('statRevenue').textContent = formatCurrency(revenue, 'palestine', adminState.settings);
     renderChart('ordersStatusChart', 'bar', collectOrderStatusData());
     renderChart('ordersRegionChart', 'doughnut', collectRegionData());
@@ -1023,6 +1027,7 @@ function getFilteredOrders() {
     var from = document.getElementById('orderDateFrom').value;
     var to = document.getElementById('orderDateTo').value;
     return adminState.orders.filter(function (order) {
+        if (order.recordType) return false; // skip aux records (withdrawal/deposit/customer/loyalty/etc.)
         var haystack = normalizeSearchText([order.orderNumber, order.customerName].join(' '));
         var created = String(order.createdAtIso || '');
         if (term && haystack.indexOf(term) < 0) return false;
@@ -1048,6 +1053,114 @@ function renderOrdersTable() {
 
 function updateOrderStatus(docId, status) {
     db.collection('orders').doc(docId).update({ status: status, statusLabel: getOrderStatusLabel(status), updatedAt: Date.now(), updatedAtIso: new Date().toISOString() });
+}
+
+// ===== CUSTOMERS & LOYALTY (read-only mirror of POS data stored in orders) =====
+function adminNormPhone(p) { return (p || '').toString().replace(/\D/g, ''); }
+function adminCustomerKey(c) {
+    var ph = adminNormPhone(c && c.phone);
+    return ph || ('name:' + ((c && c.name) || '').trim());
+}
+function adminBillTime(o) {
+    if (typeof o.createdAt === 'number') return o.createdAt;
+    if (o.createdAtIso) return new Date(o.createdAtIso).getTime();
+    return 0;
+}
+function buildAdminCustomerIndex() {
+    var idx = {};
+    function ensure(c) {
+        var key = adminCustomerKey(c);
+        if (!idx[key]) idx[key] = { key: key, name: (c && c.name) || '', phone: adminNormPhone(c && c.phone), debt: 0, paid: 0, spent: 0, visits: 0, points: 0 };
+        if (c && c.name && !idx[key].name) idx[key].name = c.name;
+        return idx[key];
+    }
+    var orders = adminState.orders || [];
+    for (var i = 0; i < orders.length; i += 1) {
+        var o = orders[i];
+        var rt = o.recordType;
+        if (rt === 'customer') { ensure({ name: o.name, phone: o.phone }); }
+        else if (rt === 'loyalty-txn') { if (o.customer) ensure(o.customer).points += (o.delta || 0); }
+        else if (rt === 'debt-manual') { if (o.customer) ensure(o.customer).debt += (o.amount || 0); }
+        else if (rt === 'debt-payment') { if (o.customer) ensure(o.customer).paid += (o.amount || 0); }
+        else if (!rt && o.source === 'pos' && o.customer) {
+            var e = ensure(o.customer);
+            e.spent += (o.total || 0); e.visits += 1;
+            if (o.paymentMethod === 'debt') e.debt += (o.total || 0);
+        }
+    }
+    return idx;
+}
+function getAdminLoyaltyConfig() {
+    var orders = adminState.orders || [];
+    var best = null;
+    for (var i = 0; i < orders.length; i += 1) {
+        if (orders[i].recordType === 'loyalty-config') {
+            if (!best || adminBillTime(orders[i]) > adminBillTime(best)) best = orders[i];
+        }
+    }
+    return best;
+}
+function getAdminRaffles() {
+    var cfg = getAdminLoyaltyConfig();
+    var arr = (cfg && cfg.raffles) ? cfg.raffles.slice() : [];
+    arr.sort(function (a, b) { return new Date(b.drawnAt || 0) - new Date(a.drawnAt || 0); });
+    return arr;
+}
+function renderCustomersAdmin() {
+    var body = document.getElementById('customersAdminBody');
+    if (!body) return; // tab not present
+    var cfg = getAdminLoyaltyConfig();
+    var cfgView = document.getElementById('loyaltyConfigView');
+    if (cfgView) {
+        if (cfg && cfg.enabled) {
+            cfgView.innerHTML = '<div class="loyalty-stats">' +
+                '<span class="badge-on">مُفعّل</span>' +
+                '<div>اكسب نقطة لكل: <b>₪' + (cfg.earnPer || 0) + '</b></div>' +
+                '<div>الاستبدال: <b>' + (cfg.redeemRate || 0) + ' نقطة = ₪1</b></div>' +
+                '<div>أقل نقاط للاستبدال: <b>' + (cfg.minRedeem || 0) + '</b></div>' +
+                '</div>';
+        } else {
+            cfgView.innerHTML = '<span class="badge-off">برنامج الولاء غير مُفعّل</span>';
+        }
+    }
+    // rewards
+    var rb = document.getElementById('loyaltyRewardsAdminBody');
+    if (rb) {
+        var rewards = (cfg && cfg.rewards) || [];
+        rb.innerHTML = rewards.map(function (r) {
+            return '<tr><td>' + escapeHtml(r.name || '') + '</td><td>' + (r.type === 'prize' ? 'هدية' : 'خصم') + '</td><td>' + (r.cost || 0) + '</td><td>' + escapeHtml(String(r.value || '')) + '</td></tr>';
+        }).join('') || '<tr><td colspan="4">لا توجد جوائز</td></tr>';
+    }
+    // raffles
+    var rab = document.getElementById('loyaltyRafflesAdminBody');
+    if (rab) {
+        var raffles = getAdminRaffles();
+        rab.innerHTML = raffles.map(function (r) {
+            var t = r.drawnAt ? formatDateTime(r.drawnAt) : '';
+            return '<tr><td>' + escapeHtml(t) + '</td><td>' + escapeHtml(r.winner || '-') + '</td><td>' + escapeHtml(r.winnerPhone || '-') + '</td><td>' + escapeHtml(r.prize || '') + '</td></tr>';
+        }).join('') || '<tr><td colspan="4">لا توجد سحوبات</td></tr>';
+    }
+    // customers list
+    var idx = buildAdminCustomerIndex();
+    var arr = [];
+    for (var k in idx) { if (idx.hasOwnProperty(k)) { idx[k].balance = (idx[k].debt || 0) - (idx[k].paid || 0); arr.push(idx[k]); } }
+    var term = (document.getElementById('customersAdminSearch') || {}).value || '';
+    if (term) {
+        var tl = term.toString().trim().toLowerCase();
+        var tp = adminNormPhone(tl);
+        arr = arr.filter(function (c) {
+            return (c.name && c.name.toLowerCase().indexOf(tl) >= 0) || (tp && c.phone && c.phone.indexOf(tp) >= 0);
+        });
+    }
+    arr.sort(function (a, b) { return (b.spent || 0) - (a.spent || 0); });
+    var loyaltyOn = cfg && cfg.enabled;
+    var cnt = document.getElementById('customersAdminCount');
+    if (cnt) cnt.textContent = arr.length;
+    body.innerHTML = arr.map(function (c) {
+        var bal = c.balance || 0;
+        var balTxt = bal > 0.001 ? '<span style="color:#c0392b;">₪' + bal.toFixed(2) + '</span>' : '<span style="color:#27ae60;">0</span>';
+        return '<tr><td>' + escapeHtml(c.name || '-') + '</td><td>' + escapeHtml(c.phone || '-') + '</td><td>' + (loyaltyOn ? (c.points || 0) : '—') + '</td><td>₪' + (c.spent || 0).toFixed(2) + '</td><td>' + (c.visits || 0) + '</td><td>' + balTxt + '</td></tr>';
+    }).join('') || '<tr><td colspan="6">لا يوجد عملاء</td></tr>';
 }
 
 function exportProductsCsv() {

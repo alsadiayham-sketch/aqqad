@@ -314,3 +314,9 @@ th { color: var(--muted); font-size: 0.9rem; }
     .delivery-row,
     .color-editor-row { grid-template-columns: 1fr; }
 }
+
+/* Customers & loyalty tab */
+.loyalty-config-view { font-size:15px; }
+.loyalty-stats { display:flex; flex-wrap:wrap; gap:18px; align-items:center; }
+.badge-on { background:#27ae60; color:#fff; padding:3px 12px; border-radius:14px; font-size:13px; }
+.badge-off { background:#95a5a6; color:#fff; padding:3px 12px; border-radius:14px; font-size:13px; }

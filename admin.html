@@ -48,6 +48,7 @@
                 <button class="tab-btn" data-tab="hero">شرائح الواجهة</button>
                 <button class="tab-btn" data-tab="users">الموظفون</button>
                 <button class="tab-btn" data-tab="pos">نقطة البيع</button>
+                <button class="tab-btn" data-tab="customers">العملاء والولاء</button>
             </div>
             <button class="ghost-btn full-width" id="logoutBtn" type="button">تسجيل الخروج</button>
         </aside>
@@ -207,6 +208,32 @@
                     <h3>سجل النشاطات (POS)</h3>
                     <div class="table-wrap" style="max-height:400px;overflow-y:auto;">
                         <table><thead><tr><th>التاريخ</th><th>المستخدم</th><th>النوع</th><th>الوصف</th></tr></thead><tbody id="posLogsBody"></tbody></table>
+                    </div>
+                </div>
+            </section>
+
+            <section class="tab-panel" id="tab-customers">
+                <div class="panel-card stack">
+                    <h3>⭐ برنامج الولاء والنقاط</h3>
+                    <div id="loyaltyConfigView" class="loyalty-config-view">جاري التحميل...</div>
+                </div>
+                <div class="panel-card stack" style="margin-top:20px;">
+                    <h3>🎁 الجوائز المتاحة</h3>
+                    <div class="table-wrap">
+                        <table><thead><tr><th>الجائزة</th><th>النوع</th><th>التكلفة (نقاط)</th><th>القيمة</th></tr></thead><tbody id="loyaltyRewardsAdminBody"></tbody></table>
+                    </div>
+                </div>
+                <div class="panel-card stack" style="margin-top:20px;">
+                    <h3>🎲 سجل السحوبات</h3>
+                    <div class="table-wrap">
+                        <table><thead><tr><th>التاريخ</th><th>الفائز</th><th>الهاتف</th><th>الجائزة</th></tr></thead><tbody id="loyaltyRafflesAdminBody"></tbody></table>
+                    </div>
+                </div>
+                <div class="panel-card stack" style="margin-top:20px;">
+                    <h3>👥 العملاء (<span id="customersAdminCount">0</span>)</h3>
+                    <input type="text" id="customersAdminSearch" placeholder="🔍 بحث بالاسم أو الهاتف..." style="max-width:360px;margin-bottom:12px;">
+                    <div class="table-wrap" style="max-height:520px;overflow-y:auto;">
+                        <table><thead><tr><th>الاسم</th><th>الهاتف</th><th>النقاط</th><th>إجمالي الشراء</th><th>الزيارات</th><th>الرصيد المستحق</th></tr></thead><tbody id="customersAdminBody"></tbody></table>
                     </div>
                 </div>
             </section>
