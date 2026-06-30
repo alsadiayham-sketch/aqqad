@@ -4,7 +4,9 @@
 -- Functions at /api/*. Passwords (admin AND cashier) are PBKDF2-SHA256 salted
 -- hashes, verified server-side. No plaintext, no client-readable hashes.
 
--- Admin/back-office users (login at admin.html via /api/login)
+-- Admin/back-office AND POS cashier users — SINGLE source of truth.
+-- Both /api/login (back-office) and /api/pos-login (POS terminal) authenticate
+-- against this one table. role 'admin' = manager, 'worker' = cashier/employee.
 CREATE TABLE IF NOT EXISTS users (
   username   TEXT PRIMARY KEY,
   name       TEXT NOT NULL DEFAULT '',
@@ -16,7 +18,9 @@ CREATE TABLE IF NOT EXISTS users (
   created_at INTEGER NOT NULL DEFAULT 0
 );
 
--- POS cashier users (login at the ADA POS terminal via /api/pos-login)
+-- DEPRECATED: legacy separate cashier table. No longer read or written — the
+-- /api/pos-users and /api/pos-login endpoints now use the unified `users` table.
+-- Kept only so existing databases don't error; safe to drop after migration.
 CREATE TABLE IF NOT EXISTS pos_users (
   username   TEXT PRIMARY KEY,
   name       TEXT NOT NULL DEFAULT '',

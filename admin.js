@@ -985,15 +985,11 @@ function saveUser(event) {
     var payload = { username: username, name: name, role: role };
     if (password) payload.password = password;
     storeAuth.saveUser(payload).then(function () {
-        // Sync the employee into POS cashier credentials (single source of truth:
-        // employees ARE the POS users). Same username/name/role/password.
-        var posPayload = { username: username, name: name, role: role, active: true };
-        if (password) posPayload.password = password;
-        return storeAuth.savePosUser(posPayload).catch(function () {});
-    }).then(function () {
+        // Single source of truth: employees ARE the POS cashiers. One record in the
+        // shared `users` table powers both the back-office and the POS terminal.
         document.getElementById('userForm').reset();
-        setAdminStatus('تم حفظ الموظف ومزامنته مع نقطة البيع.', 'success');
-        return Promise.all([loadUsers(), loadPosUsers()]);
+        setAdminStatus('تم حفظ الموظف (يعمل في الإدارة ونقطة البيع).', 'success');
+        return loadUsers();
     }).catch(function () { setAdminStatus('تعذر حفظ الموظف.', 'error'); });
 }
 
@@ -1010,11 +1006,8 @@ function removeUser(username) {
     if (adminState.currentRole !== 'admin' || username === 'aqqad') return;
     if (!confirm('حذف الموظف؟')) return;
     storeAuth.deleteUser(username).then(function () {
-        // Keep POS credentials in sync: removing an employee removes their cashier login.
-        return storeAuth.deletePosUser(username).catch(function () {});
-    }).then(function () {
-        setAdminStatus('تم حذف الموظف من الإدارة ونقطة البيع.', 'success');
-        return Promise.all([loadUsers(), loadPosUsers()]);
+        setAdminStatus('تم حذف الموظف (من الإدارة ونقطة البيع).', 'success');
+        return loadUsers();
     }).catch(function () { setAdminStatus('تعذر حذف الموظف.', 'error'); });
 }
 
@@ -1025,11 +1018,8 @@ function resetUserPassword(username) {
     var password = prompt('كلمة المرور الجديدة للمستخدم ' + username, '5555');
     if (password == null) return;
     storeAuth.saveUser({ username: username, name: user.name, role: user.role, password: String(password || '5555') }).then(function () {
-        // Mirror the new password to the POS cashier credential.
-        return storeAuth.savePosUser({ username: username, name: user.name || username, role: user.role, active: true, password: String(password || '5555') }).catch(function () {});
-    }).then(function () {
         setAdminStatus('تم تحديث كلمة المرور (الإدارة ونقطة البيع).', 'success');
-        return Promise.all([loadUsers(), loadPosUsers()]);
+        return loadUsers();
     }).catch(function () { setAdminStatus('تعذر تحديث كلمة المرور.', 'error'); });
 }
 
