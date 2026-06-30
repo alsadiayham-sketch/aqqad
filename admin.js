@@ -503,7 +503,7 @@ function createDraftVariantMatrix(sizeLabels, colors, existingVariants) {
                     break;
                 }
             }
-            draft.push(found || { size: sizeLabels[i], color: colors[j].name, stock: 0, price: 0 });
+            draft.push(found || { size: sizeLabels[i], color: colors[j].name, stock: 0, price: 0, cost: 0 });
         }
     }
     return draft;
@@ -557,7 +557,7 @@ function renderDraftVariantsGrid() {
     var body = sizes.map(function (size) {
         var cells = colors.map(function (color) {
             var variant = getDraftVariant(size, color.name);
-            return '<td><div class="variant-cell"><label>المخزون<input type="number" min="0" data-variant-stock="' + escapeHtml(size + '||' + color.name) + '" value="' + (variant ? variant.stock : 0) + '"></label><label>السعر<input type="number" min="0" step="0.01" data-variant-price="' + escapeHtml(size + '||' + color.name) + '" value="' + (variant ? variant.price : 0) + '"></label></div></td>';
+            return '<td><div class="variant-cell"><label>المخزون<input type="number" min="0" data-variant-stock="' + escapeHtml(size + '||' + color.name) + '" value="' + (variant ? variant.stock : 0) + '"></label><label>السعر<input type="number" min="0" step="0.01" data-variant-price="' + escapeHtml(size + '||' + color.name) + '" value="' + (variant ? variant.price : 0) + '"></label><label>التكلفة<input type="number" min="0" step="0.01" data-variant-cost="' + escapeHtml(size + '||' + color.name) + '" value="' + (variant ? (variant.cost || 0) : 0) + '"></label></div></td>';
         }).join('');
         return '<tr><th>' + escapeHtml(size) + '</th>' + cells + '</tr>';
     }).join('');
@@ -585,6 +585,7 @@ function updateDraftVariantField(key, field, value) {
     if (!variant) return;
     if (field === 'stock') variant.stock = Math.max(0, parseInt(value, 10) || 0);
     if (field === 'price') variant.price = Math.max(0, Number(value) || 0);
+    if (field === 'cost') variant.cost = Math.max(0, Number(value) || 0);
 }
 
 function handleProductTypeChange() {
@@ -658,6 +659,7 @@ function handleProductDraftInput(event) {
     }
     if (target.getAttribute('data-variant-stock') != null) updateDraftVariantField(target.getAttribute('data-variant-stock'), 'stock', target.value);
     if (target.getAttribute('data-variant-price') != null) updateDraftVariantField(target.getAttribute('data-variant-price'), 'price', target.value);
+    if (target.getAttribute('data-variant-cost') != null) updateDraftVariantField(target.getAttribute('data-variant-cost'), 'cost', target.value);
 }
 
 function handleProductDraftChange(event) {
@@ -983,9 +985,15 @@ function saveUser(event) {
     var payload = { username: username, name: name, role: role };
     if (password) payload.password = password;
     storeAuth.saveUser(payload).then(function () {
+        // Sync the employee into POS cashier credentials (single source of truth:
+        // employees ARE the POS users). Same username/name/role/password.
+        var posPayload = { username: username, name: name, role: role, active: true };
+        if (password) posPayload.password = password;
+        return storeAuth.savePosUser(posPayload).catch(function () {});
+    }).then(function () {
         document.getElementById('userForm').reset();
-        setAdminStatus('تم حفظ الموظف.', 'success');
-        return loadUsers();
+        setAdminStatus('تم حفظ الموظف ومزامنته مع نقطة البيع.', 'success');
+        return Promise.all([loadUsers(), loadPosUsers()]);
     }).catch(function () { setAdminStatus('تعذر حفظ الموظف.', 'error'); });
 }
 
@@ -1002,8 +1010,11 @@ function removeUser(username) {
     if (adminState.currentRole !== 'admin' || username === 'aqqad') return;
     if (!confirm('حذف الموظف؟')) return;
     storeAuth.deleteUser(username).then(function () {
-        setAdminStatus('تم حذف الموظف.', 'success');
-        return loadUsers();
+        // Keep POS credentials in sync: removing an employee removes their cashier login.
+        return storeAuth.deletePosUser(username).catch(function () {});
+    }).then(function () {
+        setAdminStatus('تم حذف الموظف من الإدارة ونقطة البيع.', 'success');
+        return Promise.all([loadUsers(), loadPosUsers()]);
     }).catch(function () { setAdminStatus('تعذر حذف الموظف.', 'error'); });
 }
 
@@ -1014,8 +1025,11 @@ function resetUserPassword(username) {
     var password = prompt('كلمة المرور الجديدة للمستخدم ' + username, '5555');
     if (password == null) return;
     storeAuth.saveUser({ username: username, name: user.name, role: user.role, password: String(password || '5555') }).then(function () {
-        setAdminStatus('تم تحديث كلمة المرور.', 'success');
-        return loadUsers();
+        // Mirror the new password to the POS cashier credential.
+        return storeAuth.savePosUser({ username: username, name: user.name || username, role: user.role, active: true, password: String(password || '5555') }).catch(function () {});
+    }).then(function () {
+        setAdminStatus('تم تحديث كلمة المرور (الإدارة ونقطة البيع).', 'success');
+        return Promise.all([loadUsers(), loadPosUsers()]);
     }).catch(function () { setAdminStatus('تعذر تحديث كلمة المرور.', 'error'); });
 }
 
