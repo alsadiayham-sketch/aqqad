@@ -206,8 +206,70 @@
             <section class="tab-panel" id="tab-customers">
                 <div class="panel-card stack">
                     <h3>⭐ برنامج الولاء والنقاط</h3>
-                    <div id="loyaltyConfigView" class="loyalty-config-view">جاري التحميل...</div>
+                    <div id="loyaltyConfigView" class="loyalty-config-view"></div>
+                    <form id="loyaltyEditorForm" class="loyalty-editor" style="display:none;">
+                        <label class="ly-check"><input type="checkbox" id="lyEnabled"> تفعيل برنامج الولاء</label>
+                        <div id="lyFields" class="stack" style="margin-top:12px;">
+                            <div class="ly-row">
+                                <label>نوع البرنامج</label>
+                                <div class="ly-btns" id="lyModeBtns">
+                                    <button type="button" class="ly-choice" data-mode="longterm">دائم (طويل الأمد)</button>
+                                    <button type="button" class="ly-choice" data-mode="campaign">حملة مؤقتة</button>
+                                </div>
+                            </div>
+                            <div class="ly-row">
+                                <label>اكسب نقطة لكل (₪)</label>
+                                <input type="number" id="lyEarnPer" min="1" step="1" value="10">
+                            </div>
+                            <div class="ly-row">
+                                <label>آلية النقاط</label>
+                                <div class="ly-btns" id="lyMechBtns">
+                                    <button type="button" class="ly-choice" data-mech="none">عرض فقط</button>
+                                    <button type="button" class="ly-choice" data-mech="purchase">خصم عند الشراء</button>
+                                    <button type="button" class="ly-choice" data-mech="prizes">جوائز</button>
+                                    <button type="button" class="ly-choice" data-mech="draw">سحب</button>
+                                </div>
+                            </div>
+                            <div class="ly-box" id="lyPurchaseBox" style="display:none;">
+                                <div class="ly-row"><label>معدل الاستبدال (نقطة = ₪1)</label><input type="number" id="lyRedeemRate" min="1" step="1" value="100"></div>
+                                <div class="ly-row"><label>أقل نقاط للاستبدال</label><input type="number" id="lyMinRedeem" min="0" step="1" value="100"></div>
+                            </div>
+                            <div class="ly-box" id="lyPrizesBox" style="display:none;">
+                                <div class="ly-row"><label>الجائزة الكبرى (لصاحب أعلى نقاط)</label><input type="text" id="lyGrandPrize" placeholder="مثال: سيارة / قسيمة 500₪"></div>
+                                <p class="muted" style="margin:4px 0 0;">تُدار الجوائز التفصيلية من تطبيق نقطة البيع.</p>
+                            </div>
+                            <div class="ly-box" id="lyDrawBox" style="display:none;">
+                                <div class="ly-row"><label>أقل نقاط للدخول في السحب</label><input type="number" id="lyMinEntry" min="0" step="1" value="0"></div>
+                                <div class="ly-row">
+                                    <label>طريقة السحب</label>
+                                    <div class="ly-btns" id="lyDrawByBtns">
+                                        <button type="button" class="ly-choice" data-drawby="random">عشوائي</button>
+                                        <button type="button" class="ly-choice" data-drawby="top">الأعلى نقاطاً</button>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="ly-box" id="lyCampaignBox" style="display:none;">
+                                <div class="ly-row"><label>اسم الحملة</label><input type="text" id="lyCampName" placeholder="حملة العيد"></div>
+                                <div class="ly-row"><label>تاريخ البدء</label><input type="date" id="lyCampStart"></div>
+                                <div class="ly-row"><label>تاريخ الانتهاء</label><input type="date" id="lyCampEnd"></div>
+                                <div class="ly-row">
+                                    <label>إجراء نهاية الحملة</label>
+                                    <select id="lyCampEndAction">
+                                        <option value="none">لا شيء</option>
+                                        <option value="credit">تحويل النقاط إلى رصيد العميل</option>
+                                        <option value="draw">سحب فائزين</option>
+                                        <option value="both">تحويل رصيد + سحب</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="ly-row" style="margin-top:14px;">
+                            <button type="submit" class="btn-primary" id="lySaveBtn">💾 حفظ إعدادات الولاء</button>
+                            <span id="lySaveHint" class="muted"></span>
+                        </div>
+                    </form>
                 </div>
+
                 <div class="panel-card stack" style="margin-top:20px;">
                     <h3>🎁 الجوائز المتاحة</h3>
                     <div class="table-wrap">

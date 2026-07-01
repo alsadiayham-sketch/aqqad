@@ -36,10 +36,15 @@
     <script src="shared.js"></script>
     <script>
         var checkoutState = { deliveryId: '', paymentMethod: 'cod' };
+        var checkoutLoyalty = null;
         document.addEventListener('DOMContentLoaded', function () {
             AqqadStore.init({ navSubtitle: 'إتمام الطلب بسهولة' });
             AqqadStore.onReady(function () {
                 renderCheckoutPage();
+                fetch('/api/orders?loyalty=1').then(function (r) { return r.json(); }).then(function (d) {
+                    checkoutLoyalty = (d && d.loyalty) || null;
+                    if (checkoutLoyalty && checkoutLoyalty.enabled) renderCheckoutPage();
+                }).catch(function () {});
             });
         });
         function getCheckoutRows() {
@@ -67,13 +72,18 @@
             var selectedDelivery = deliveryList.filter(function (item) { return item.id === checkoutState.deliveryId; })[0] || deliveryList[0];
             var deliveryBase = selectedDelivery ? Number(selectedDelivery.price || 0) : 0;
             var totalBase = subtotalBase + deliveryBase;
+            var loyaltyLine = '';
+            if (checkoutLoyalty && checkoutLoyalty.enabled && checkoutLoyalty.earnPer > 0) {
+                var earnPts = Math.floor(totalBase / checkoutLoyalty.earnPer);
+                if (earnPts > 0) loyaltyLine = '<div class="summary-line" style="color:#b8860b"><span>🎁 نقاط الولاء</span><strong>+' + earnPts + ' نقطة</strong></div>';
+            }
             var deliveryHtml = deliveryList.map(function (item) {
                 return '<button class="option-card ' + (item.id === checkoutState.deliveryId ? 'active' : '') + '" type="button" onclick="selectDelivery(\'' + item.id + '\')"><strong>' + escapeHtml(item.name) + '</strong><div style="color:var(--muted)">' + formatCurrency(item.price, AqqadStore.state.region, AqqadStore.state.settings) + '</div></button>';
             }).join('');
             var paymentHtml = AqqadStore.state.settings.paymentMethods.map(function (method) {
                 return '<button class="option-card ' + (method === checkoutState.paymentMethod ? 'active' : '') + '" type="button" onclick="selectPayment(\'' + method + '\')"><strong>' + escapeHtml(getPaymentMethodLabel(method)) + '</strong><div style="color:var(--muted)">' + (method === 'visa' ? 'سيتم التواصل معك لإكمال تفاصيل الدفع.' : 'الدفع عند الاستلام متاح مباشرة.') + '</div></button>';
             }).join('');
-            content.innerHTML = (invalidMessages.length ? '<div class="notice-card stock-low" id="checkoutValidationNotice">' + escapeHtml(invalidMessages[0]) + '</div>' : '<div id="checkoutValidationNotice"></div>') + '<div class="checkout-grid"><div class="checkout-card"><h3>مراجعة الطلب</h3><div class="stack">' + itemsHtml + '</div><h3 style="margin-top:22px">منطقة التوصيل</h3><div class="option-cards">' + deliveryHtml + '</div><h3 style="margin-top:22px">طريقة الدفع</h3><div class="option-cards">' + paymentHtml + '</div></div><div class="checkout-card"><h3>بيانات المستلم</h3><div class="stack"><input id="customerName" type="text" placeholder="الاسم الكامل"><input id="customerPhone" type="tel" placeholder="رقم الهاتف"><input id="customerAddress" type="text" placeholder="العنوان الكامل"><textarea id="customerNotes" rows="4" placeholder="ملاحظات إضافية (اختياري)"></textarea></div><div style="margin-top:18px" class="stack"><div class="summary-line"><span>المجموع</span><strong>' + formatCurrency(subtotalBase, AqqadStore.state.region, AqqadStore.state.settings) + '</strong></div><div class="summary-line"><span>التوصيل</span><strong>' + formatCurrency(deliveryBase, AqqadStore.state.region, AqqadStore.state.settings) + '</strong></div><div class="summary-line" style="font-size:1.15rem"><span>الإجمالي</span><strong>' + formatCurrency(totalBase, AqqadStore.state.region, AqqadStore.state.settings) + '</strong></div></div><div class="action-row" style="margin-top:20px"><button class="btn btn-primary" type="button" onclick="submitCheckout()" style="flex:1">تأكيد الطلب</button><a class="btn btn-secondary" href="index.html">العودة للتسوّق</a></div></div></div>';
+            content.innerHTML = (invalidMessages.length ? '<div class="notice-card stock-low" id="checkoutValidationNotice">' + escapeHtml(invalidMessages[0]) + '</div>' : '<div id="checkoutValidationNotice"></div>') + '<div class="checkout-grid"><div class="checkout-card"><h3>مراجعة الطلب</h3><div class="stack">' + itemsHtml + '</div><h3 style="margin-top:22px">منطقة التوصيل</h3><div class="option-cards">' + deliveryHtml + '</div><h3 style="margin-top:22px">طريقة الدفع</h3><div class="option-cards">' + paymentHtml + '</div></div><div class="checkout-card"><h3>بيانات المستلم</h3><div class="stack"><input id="customerName" type="text" placeholder="الاسم الكامل"><input id="customerPhone" type="tel" placeholder="رقم الهاتف"><input id="customerAddress" type="text" placeholder="العنوان الكامل"><textarea id="customerNotes" rows="4" placeholder="ملاحظات إضافية (اختياري)"></textarea></div><div style="margin-top:18px" class="stack"><div class="summary-line"><span>المجموع</span><strong>' + formatCurrency(subtotalBase, AqqadStore.state.region, AqqadStore.state.settings) + '</strong></div><div class="summary-line"><span>التوصيل</span><strong>' + formatCurrency(deliveryBase, AqqadStore.state.region, AqqadStore.state.settings) + '</strong></div><div class="summary-line" style="font-size:1.15rem"><span>الإجمالي</span><strong>' + formatCurrency(totalBase, AqqadStore.state.region, AqqadStore.state.settings) + '</strong></div>' + loyaltyLine + '</div><div class="action-row" style="margin-top:20px"><button class="btn btn-primary" type="button" onclick="submitCheckout()" style="flex:1">تأكيد الطلب</button><a class="btn btn-secondary" href="index.html">العودة للتسوّق</a></div></div></div>';
         }
         function selectDelivery(id) { checkoutState.deliveryId = id; renderCheckoutPage(); }
         function selectPayment(method) { checkoutState.paymentMethod = method; renderCheckoutPage(); }

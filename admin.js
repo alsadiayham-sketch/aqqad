@@ -1110,23 +1110,144 @@ function getAdminRaffles() {
     arr.sort(function (a, b) { return new Date(b.drawnAt || 0) - new Date(a.drawnAt || 0); });
     return arr;
 }
+
+// ---- Loyalty editor (web admin edits the SAME shared loyalty-config the POS uses) ----
+var loyaltyEditorState = { mode: 'longterm', mech: 'none', drawBy: 'random', currentCfg: null, wired: false };
+
+function lyToDateInput(v) {
+    if (!v) return '';
+    var d = new Date(v);
+    if (isNaN(d.getTime())) return '';
+    return d.toISOString().slice(0, 10);
+}
+function lySetActive(containerId, attr, value) {
+    var c = document.getElementById(containerId);
+    if (!c) return;
+    var btns = c.querySelectorAll('.ly-choice');
+    for (var i = 0; i < btns.length; i++) {
+        btns[i].classList.toggle('active', btns[i].getAttribute(attr) === value);
+    }
+}
+function lyRefreshBoxes() {
+    var mech = loyaltyEditorState.mech;
+    var show = function (id, on) { var el = document.getElementById(id); if (el) el.style.display = on ? '' : 'none'; };
+    show('lyPurchaseBox', mech === 'purchase');
+    show('lyPrizesBox', mech === 'prizes');
+    show('lyDrawBox', mech === 'draw');
+    show('lyCampaignBox', loyaltyEditorState.mode === 'campaign');
+    lySetActive('lyModeBtns', 'data-mode', loyaltyEditorState.mode);
+    lySetActive('lyMechBtns', 'data-mech', loyaltyEditorState.mech);
+    lySetActive('lyDrawByBtns', 'data-drawby', loyaltyEditorState.drawBy);
+}
+function populateLoyaltyEditor(cfg) {
+    var form = document.getElementById('loyaltyEditorForm');
+    if (!form) return;
+    loyaltyEditorState.currentCfg = cfg || null;
+    form.style.display = '';
+    var val = function (id, v) { var el = document.getElementById(id); if (el) el.value = v; };
+    var enabled = !!(cfg && cfg.enabled);
+    var enChk = document.getElementById('lyEnabled');
+    if (enChk) enChk.checked = enabled;
+    // Backward-compatible inference (mirrors POS getLoyalty defaults)
+    var mode = (cfg && cfg.mode) || ((cfg && cfg.campaignEnd) ? 'campaign' : 'longterm');
+    var mech = (cfg && cfg.mechanism);
+    if (!mech) mech = (cfg && cfg.rewards && cfg.rewards.length) ? 'prizes' : (cfg && cfg.redeemRate ? 'purchase' : 'none');
+    loyaltyEditorState.mode = mode;
+    loyaltyEditorState.mech = mech;
+    loyaltyEditorState.drawBy = (cfg && cfg.drawBy) || 'random';
+    val('lyEarnPer', (cfg && cfg.earnPer) || 10);
+    val('lyRedeemRate', (cfg && cfg.redeemRate) || 100);
+    val('lyMinRedeem', (cfg && cfg.minRedeem) || 100);
+    val('lyGrandPrize', (cfg && cfg.grandPrize) || '');
+    val('lyMinEntry', (cfg && cfg.minEntryPoints) || 0);
+    val('lyCampName', (cfg && cfg.campaignName) || '');
+    val('lyCampStart', lyToDateInput(cfg && cfg.campaignStart));
+    val('lyCampEnd', lyToDateInput(cfg && cfg.campaignEnd));
+    val('lyCampEndAction', (cfg && cfg.campaignEndAction) || 'none');
+    var fields = document.getElementById('lyFields');
+    if (fields) fields.style.display = enabled ? '' : 'none';
+    lyRefreshBoxes();
+    wireLoyaltyEditor();
+}
+function wireLoyaltyEditor() {
+    if (loyaltyEditorState.wired) return;
+    loyaltyEditorState.wired = true;
+    var enChk = document.getElementById('lyEnabled');
+    if (enChk) enChk.addEventListener('change', function () {
+        var fields = document.getElementById('lyFields');
+        if (fields) fields.style.display = enChk.checked ? '' : 'none';
+    });
+    var bind = function (containerId, attr, key) {
+        var c = document.getElementById(containerId);
+        if (!c) return;
+        c.addEventListener('click', function (e) {
+            var b = e.target.closest ? e.target.closest('.ly-choice') : null;
+            if (!b) return;
+            e.preventDefault();
+            loyaltyEditorState[key] = b.getAttribute(attr);
+            lyRefreshBoxes();
+        });
+    };
+    bind('lyModeBtns', 'data-mode', 'mode');
+    bind('lyMechBtns', 'data-mech', 'mech');
+    bind('lyDrawByBtns', 'data-drawby', 'drawBy');
+    var form = document.getElementById('loyaltyEditorForm');
+    if (form) form.addEventListener('submit', function (e) { e.preventDefault(); saveLoyaltyEditor(); });
+}
+function saveLoyaltyEditor() {
+    var num = function (id, d) { var el = document.getElementById(id); var n = el ? parseFloat(el.value) : NaN; return isNaN(n) ? d : n; };
+    var str = function (id) { var el = document.getElementById(id); return el ? el.value.trim() : ''; };
+    var prev = loyaltyEditorState.currentCfg || {};
+    var enabled = !!(document.getElementById('lyEnabled') || {}).checked;
+    var mode = loyaltyEditorState.mode;
+    var mech = loyaltyEditorState.mech;
+    var cfg = {
+        recordType: 'loyalty-config',
+        source: 'pos',
+        enabled: enabled,
+        mode: mode,
+        earnPer: num('lyEarnPer', 10),
+        mechanism: mech,
+        redeemRate: num('lyRedeemRate', 100),
+        minRedeem: num('lyMinRedeem', 100),
+        grandPrize: str('lyGrandPrize'),
+        minEntryPoints: num('lyMinEntry', 0),
+        drawBy: loyaltyEditorState.drawBy,
+        // Preserve POS-managed collections so the web editor never wipes them.
+        rewards: prev.rewards || [],
+        raffles: prev.raffles || [],
+        raffleWinners: prev.raffleWinners || [],
+        campaignName: str('lyCampName'),
+        campaignStart: str('lyCampStart') ? new Date(str('lyCampStart')).getTime() : null,
+        campaignEnd: (mode === 'campaign' && str('lyCampEnd')) ? new Date(str('lyCampEnd')).getTime() : null,
+        campaignEndAction: str('lyCampEndAction'),
+        campaignProcessedFor: prev.campaignProcessedFor || null,
+        updatedAt: Date.now(),
+        savedFrom: 'web-admin'
+    };
+    var hint = document.getElementById('lySaveHint');
+    var btn = document.getElementById('lySaveBtn');
+    if (btn) { btn.disabled = true; btn.textContent = 'جاري الحفظ...'; }
+    db.collection('orders').doc('loyalty_cfg_' + Date.now().toString(36)).set(cfg).then(function () {
+        if (hint) { hint.textContent = '✅ تم الحفظ — سيظهر في نقطة البيع والمتجر'; }
+        // Reflect immediately in local admin state so re-render sees the newest config.
+        cfg.id = cfg.id || ('loyalty_cfg_' + Date.now().toString(36));
+        cfg.createdAt = Date.now();
+        (adminState.orders = adminState.orders || []).push(cfg);
+        loyaltyEditorState.currentCfg = cfg;
+        if (btn) { btn.disabled = false; btn.textContent = '💾 حفظ إعدادات الولاء'; }
+        setTimeout(function () { if (hint) hint.textContent = ''; }, 4000);
+    }).catch(function (err) {
+        if (hint) hint.textContent = '❌ فشل الحفظ: ' + (err && err.message || err);
+        if (btn) { btn.disabled = false; btn.textContent = '💾 حفظ إعدادات الولاء'; }
+    });
+}
+
 function renderCustomersAdmin() {
     var body = document.getElementById('customersAdminBody');
     if (!body) return; // tab not present
     var cfg = getAdminLoyaltyConfig();
-    var cfgView = document.getElementById('loyaltyConfigView');
-    if (cfgView) {
-        if (cfg && cfg.enabled) {
-            cfgView.innerHTML = '<div class="loyalty-stats">' +
-                '<span class="badge-on">مُفعّل</span>' +
-                '<div>اكسب نقطة لكل: <b>₪' + (cfg.earnPer || 0) + '</b></div>' +
-                '<div>الاستبدال: <b>' + (cfg.redeemRate || 0) + ' نقطة = ₪1</b></div>' +
-                '<div>أقل نقاط للاستبدال: <b>' + (cfg.minRedeem || 0) + '</b></div>' +
-                '</div>';
-        } else {
-            cfgView.innerHTML = '<span class="badge-off">برنامج الولاء غير مُفعّل</span>';
-        }
-    }
+    populateLoyaltyEditor(cfg);
     // rewards
     var rb = document.getElementById('loyaltyRewardsAdminBody');
     if (rb) {

@@ -320,3 +320,14 @@ th { color: var(--muted); font-size: 0.9rem; }
 .loyalty-stats { display:flex; flex-wrap:wrap; gap:18px; align-items:center; }
 .badge-on { background:#27ae60; color:#fff; padding:3px 12px; border-radius:14px; font-size:13px; }
 .badge-off { background:#95a5a6; color:#fff; padding:3px 12px; border-radius:14px; font-size:13px; }
+
+/* Loyalty editor (web admin) */
+.loyalty-editor .ly-check { display:flex; align-items:center; gap:8px; font-weight:700; font-size:15px; }
+.loyalty-editor .ly-row { display:flex; flex-direction:column; gap:6px; margin:10px 0; }
+.loyalty-editor .ly-row > label { font-weight:600; font-size:14px; color:var(--muted); }
+.loyalty-editor .ly-row input, .loyalty-editor .ly-row select { max-width:340px; }
+.loyalty-editor .ly-btns { display:flex; flex-wrap:wrap; gap:8px; }
+.loyalty-editor .ly-choice { padding:9px 16px; border:1.5px solid #d7dee8; background:#f4f6fa; color:#33405a; border-radius:10px; cursor:pointer; font-size:14px; font-weight:600; transition:all .15s; }
+.loyalty-editor .ly-choice:hover { background:#e9edf5; }
+.loyalty-editor .ly-choice.active { background:#4a6cf7; color:#fff; border-color:#4a6cf7; box-shadow:0 2px 8px rgba(74,108,247,.3); }
+.loyalty-editor .ly-box { margin:10px 0; padding:12px; background:#f8fafc; border:1px solid #e8edf4; border-radius:12px; }

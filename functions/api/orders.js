@@ -18,6 +18,24 @@ export async function onRequestGet(context) {
     const url = new URL(context.request.url);
     const id = url.searchParams.get("id");
     const orderNumber = url.searchParams.get("orderNumber");
+    // PUBLIC sanitized loyalty config so the storefront can show "earn X points".
+    if (url.searchParams.get("loyalty") === "1") {
+        const cfg = await getLatestLoyaltyConfig(context.env);
+        if (!cfg || !cfg.enabled) return json({ loyalty: { enabled: false } });
+        return json({
+            loyalty: {
+                enabled: true,
+                mode: cfg.mode || "longterm",
+                mechanism: cfg.mechanism || "none",
+                earnPer: Number(cfg.earnPer || 0),
+                redeemRate: Number(cfg.redeemRate || 0),
+                minRedeem: Number(cfg.minRedeem || 0),
+                grandPrize: cfg.grandPrize || "",
+                campaignName: cfg.campaignName || "",
+                campaignEnd: cfg.campaignEnd || null
+            }
+        });
+    }
     if (id || orderNumber) {
         const row = id
             ? await context.env.DB.prepare("SELECT id, order_number, source, data, status, created_at FROM orders WHERE id = ?").bind(id).first()
@@ -63,7 +81,53 @@ export async function onRequestPost(context) {
         await deductStock(context.env, data.items);
     } catch (e) { /* ignore stock adjustment failure */ }
 
+    // Award loyalty points for genuine web sales (not for special record types
+    // like loyalty-config / loyalty-txn / debt-*). Best-effort & server-side so
+    // the public storefront never needs read access to the private config.
+    try {
+        if (source === "web" && !data.recordType) {
+            await awardWebLoyalty(context.env, data, orderNumber);
+        }
+    } catch (e) { /* ignore loyalty failure */ }
+
     return json({ id, order: { ...data, id, status, source, orderNumber, createdAt: now } });
+}
+
+async function getLatestLoyaltyConfig(env) {
+    const row = await env.DB
+        .prepare("SELECT data FROM orders WHERE data LIKE '%\"recordType\":\"loyalty-config\"%' ORDER BY created_at DESC LIMIT 1")
+        .first();
+    if (!row) return null;
+    try { return JSON.parse(row.data) || null; } catch (e) { return null; }
+}
+
+async function awardWebLoyalty(env, data, orderNumber) {
+    const phone = (data.phone || "").toString().replace(/\D/g, "");
+    if (!phone) return;
+    const total = Number(data.totalBase || data.total || 0);
+    if (!(total > 0)) return;
+    const cfg = await getLatestLoyaltyConfig(env);
+    if (!cfg || !cfg.enabled) return;
+    // Points are only display-worthy; still award for every mechanism except pure "none" display? 
+    // Points ARE awarded for all mechanisms (the mechanism only governs redemption/prizes/draw).
+    const earnPer = Number(cfg.earnPer || 0);
+    if (!(earnPer > 0)) return;
+    const points = Math.floor(total / earnPer);
+    if (points <= 0) return;
+    const txnId = "o_ltxn_" + Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+    const txn = {
+        recordType: "loyalty-txn",
+        source: "web",
+        customer: { name: data.customerName || "", phone: phone },
+        delta: points,
+        reason: "web-order",
+        orderNumber: orderNumber || null,
+        createdAt: Date.now()
+    };
+    await env.DB
+        .prepare("INSERT OR REPLACE INTO orders (id, order_number, data, status, source, created_at) VALUES (?, ?, ?, ?, ?, ?)")
+        .bind(txnId, null, JSON.stringify(txn), "loyalty", "web", Date.now())
+        .run();
 }
 
 async function deductStock(env, items) {
