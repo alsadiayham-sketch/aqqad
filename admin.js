@@ -1253,7 +1253,7 @@ function renderCustomersAdmin() {
     if (rb) {
         var rewards = (cfg && cfg.rewards) || [];
         rb.innerHTML = rewards.map(function (r) {
-            return '<tr><td>' + escapeHtml(r.name || '') + '</td><td>' + (r.type === 'prize' ? 'هدية' : 'خصم') + '</td><td>' + (r.cost || 0) + '</td><td>' + escapeHtml(String(r.value || '')) + '</td></tr>';
+            return '<tr><td>' + escapeHtml(r.name || '') + '</td><td>' + (r.type === 'prize' ? 'هدية' : (r.type === 'discount-pct' ? 'خصم %' : 'خصم ₪')) + '</td><td>' + (r.cost || 0) + '</td><td>' + escapeHtml(String(r.value || '')) + '</td></tr>';
         }).join('') || '<tr><td colspan="4">لا توجد جوائز</td></tr>';
     }
     // raffles
