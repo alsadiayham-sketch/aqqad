@@ -176,8 +176,7 @@
     DocRef.prototype.onSnapshot = function (onNext, onError) {
         var self = this;
         var stopped = false;
-        var INTERVAL = 8000;
-        function poll() {
+        function fetchOnce() {
             if (stopped) return;
             self.get().then(function (snap) {
                 if (!stopped && typeof onNext === 'function') onNext(snap);
@@ -185,9 +184,8 @@
                 if (!stopped && typeof onError === 'function') onError(err);
             });
         }
-        poll();
-        var timer = setInterval(poll, INTERVAL);
-        return function () { stopped = true; clearInterval(timer); };
+        fetchOnce();
+        return function () { stopped = true; };
     };
 
     // ---- Collection / Query ----
@@ -246,8 +244,7 @@
     Collection.prototype.onSnapshot = function (onNext, onError) {
         var self = this;
         var stopped = false;
-        var INTERVAL = 8000;
-        function poll() {
+        function fetchOnce() {
             if (stopped) return;
             self.get().then(function (snap) {
                 if (!stopped && typeof onNext === 'function') onNext(snap);
@@ -255,9 +252,8 @@
                 if (!stopped && typeof onError === 'function') onError(err);
             });
         }
-        poll();
-        var timer = setInterval(poll, INTERVAL);
-        return function () { stopped = true; clearInterval(timer); };
+        fetchOnce();
+        return function () { stopped = true; };
     };
 
     // settings is accessed as db.collection('settings').doc('config'|'heroSlides')

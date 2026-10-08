@@ -182,20 +182,13 @@ var CORE_CACHE_TTL = 30 * 60 * 1000;
         if (state.subscriptionsStarted) return;
         state.subscriptionsStarted = true;
         applyCoreCache();
-        fetchFromEdgeCache('/api/products', function (payload) {
-            if (state.productSource === 'snapshot') return;
-            state.products = normalizeProducts(payload);
-            state.productSource = 'edge';
-            state.cart = normalizeCartItems(state.cart, state.products);
-            saveCartStorage();
-            writeCoreCache(CACHE_KEY_PRODUCTS, state.products);
-            setReady('products');
-        }, function () {
-        });
         if (!global.db) {
             markAllReadyFallback();
             return;
         }
+        // The database compatibility layer performs one request per page load.
+        // Public API caching below prevents repeated visitors from re-reading
+        // the full catalog at the D1 binding.
         db.collection('products').onSnapshot(function (snapshot) {
             state.products = snapshot.docs.map(function (docSnap) {
                 var data = docSnap.data();

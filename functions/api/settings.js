@@ -19,7 +19,9 @@ export async function onRequestGet(context) {
     const row = await context.env.DB.prepare("SELECT data FROM settings WHERE key = ?").bind(key).first();
     let data = {};
     if (row) { try { data = JSON.parse(row.data) || {}; } catch (e) { data = {}; } }
-    return json({ settings: data });
+    return json({ settings: data }, 200, {
+        "Cache-Control": "public, max-age=0, s-maxage=60, stale-while-revalidate=300"
+    });
 }
 
 // POST /api/settings?key=config|heroSlides -> admin only (replace the doc)
